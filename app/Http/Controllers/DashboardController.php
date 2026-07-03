@@ -8,22 +8,70 @@ class DashboardController extends Controller
 {
     /**
      * Display the security dashboard.
-     *
-     * Stats are placeholder values until the employees, visitors,
-     * cameras and access-log modules provide real data sources.
      */
     public function index(): View
     {
-        $stats = [
-            ['label' => 'Total Employees', 'value' => 248, 'meta' => '+4 this month', 'icon' => 'users'],
-            ['label' => 'Active Employees', 'value' => 231, 'meta' => '93% on site', 'icon' => 'user-check'],
-            ['label' => 'Visitors Today', 'value' => 37, 'meta' => '12 currently inside', 'icon' => 'badge'],
-            ['label' => 'Cameras Online', 'value' => '46 / 48', 'meta' => '2 offline — Zone C', 'icon' => 'camera'],
-            ['label' => 'Doors Secured', 'value' => '18 / 18', 'meta' => 'All zones locked', 'icon' => 'lock'],
-            ['label' => 'Alerts (24h)', 'value' => 3, 'meta' => '1 unresolved', 'icon' => 'alert'],
-        ];
+        $weeklyAccess = $this->weeklyAccessCounts();
 
-        $accessEvents = [
+        return view('dashboard', [
+            'stats' => $this->stats(),
+            'accessEvents' => $this->recentAccessEvents(),
+            'weeklyAccess' => $weeklyAccess,
+            'maxWeekly' => max(array_column($weeklyAccess, 'count')),
+            'cameras' => $this->cameraStatus(),
+        ]);
+    }
+
+    /**
+     * Headline statistics for the stat cards.
+     *
+     * Placeholder values — swap each entry for a real query as the
+     * matching module lands (e.g. Employee::count(), Visitor::today()->count()).
+     *
+     * @return array<int, array{label: string, value: string|int, meta: string}>
+     */
+    private function stats(): array
+    {
+        $cameras = $this->cameraStatus();
+
+        return [
+            ['label' => 'Total Employees', 'value' => 248, 'meta' => '+4 this month'],
+            ['label' => 'Active Employees', 'value' => 231, 'meta' => '93% on site'],
+            ['label' => 'Visitors Today', 'value' => 37, 'meta' => '12 currently inside'],
+            ['label' => 'Cameras Online', 'value' => $cameras['online'].' / '.$cameras['total'], 'meta' => $cameras['meta']],
+            ['label' => 'Doors Secured', 'value' => '18 / 18', 'meta' => 'All zones locked'],
+            ['label' => 'Alerts (24h)', 'value' => 3, 'meta' => '1 unresolved'],
+        ];
+    }
+
+    /**
+     * Camera availability — single source of truth for the stat card
+     * and the donut chart. Replace with Camera::online()->count() etc.
+     *
+     * @return array{online: int, total: int, percent: int, meta: string}
+     */
+    private function cameraStatus(): array
+    {
+        $online = 46;
+        $total = 48;
+
+        return [
+            'online' => $online,
+            'total' => $total,
+            'percent' => (int) round($online / $total * 100),
+            'meta' => ($total - $online).' offline — Zone C',
+        ];
+    }
+
+    /**
+     * Latest entries for the activity table.
+     * Replace with AccessLog::latest()->limit(6)->get() when available.
+     *
+     * @return array<int, array{time: string, name: string, type: string, door: string, status: string}>
+     */
+    private function recentAccessEvents(): array
+    {
+        return [
             ['time' => '09:42', 'name' => 'Sarah Mitchell', 'type' => 'Employee', 'door' => 'Main Entrance', 'status' => 'Granted'],
             ['time' => '09:38', 'name' => 'David Okoro', 'type' => 'Visitor', 'door' => 'Reception Gate', 'status' => 'Granted'],
             ['time' => '09:31', 'name' => 'Unknown Badge #4412', 'type' => '—', 'door' => 'Server Room', 'status' => 'Denied'],
@@ -31,9 +79,17 @@ class DashboardController extends Controller
             ['time' => '09:15', 'name' => 'James Carter', 'type' => 'Contractor', 'door' => 'Loading Dock', 'status' => 'Granted'],
             ['time' => '09:02', 'name' => 'Unknown Badge #4412', 'type' => '—', 'door' => 'Server Room', 'status' => 'Denied'],
         ];
+    }
 
-        // Access events per day for the placeholder bar chart (Mon..Sun).
-        $weeklyAccess = [
+    /**
+     * Access events per day (Mon..Sun) for the bar chart.
+     * Replace with an AccessLog groupBy(day) aggregate when available.
+     *
+     * @return array<int, array{day: string, count: int}>
+     */
+    private function weeklyAccessCounts(): array
+    {
+        return [
             ['day' => 'Mon', 'count' => 320],
             ['day' => 'Tue', 'count' => 410],
             ['day' => 'Wed', 'count' => 385],
@@ -42,12 +98,5 @@ class DashboardController extends Controller
             ['day' => 'Sat', 'count' => 120],
             ['day' => 'Sun', 'count' => 85],
         ];
-
-        return view('dashboard', [
-            'stats' => $stats,
-            'accessEvents' => $accessEvents,
-            'weeklyAccess' => $weeklyAccess,
-            'maxWeekly' => max(array_column($weeklyAccess, 'count')),
-        ]);
     }
 }

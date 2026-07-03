@@ -1,66 +1,87 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# Smart Security System
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+A Laravel 11 application for facility security management: authentication, a security
+dashboard, and (upcoming) modules for employees, visitors, cameras, access logs and reports.
 
-## About Laravel
+## Features
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+- **Authentication** — login, registration, logout with CSRF protection, login rate
+  limiting (5 attempts per email + IP), session regeneration, and Remember Me.
+- **Dashboard** — security overview with stat cards, weekly access chart, camera status,
+  and a recent access events table (placeholder data until the domain modules land).
+- **Shared layouts** — `layouts/app.blade.php` (sidebar, topbar, footer) for authenticated
+  pages, `layouts/guest.blade.php` for auth pages.
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+## Requirements
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+- PHP 8.2+ (Laragon ships 8.3 at `C:\laragon\bin\php\php-8.3.30-Win32-vs16-x64\php.exe`)
+- Composer, Node.js 20+
+- MySQL 8 (or use the bundled Docker setup)
 
-## Learning Laravel
+## Running with Docker (recommended)
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+```bash
+docker compose up -d --build
+```
 
-You may also try the [Laravel Bootcamp](https://bootcamp.laravel.com), where you will be guided through building a modern Laravel application from scratch.
+- App: http://localhost:8000 — MySQL is published on `localhost:3306` (`smart` / `secret`).
+- Migrations run automatically on container start (see `docker/entrypoint.sh`).
+- Seed the demo user: `docker compose exec app php artisan db:seed`
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+**Live code:** `app/`, `routes/`, `resources/`, `config/` and `database/` are volume-mounted,
+so PHP and Blade changes apply immediately. CSS/JS changes need `npm run build` on the host
+(`public/build` is shared with the container). Only changes to `composer.json`, `package.json`
+or the Dockerfile itself require `docker compose build app`.
 
-## Laravel Sponsors
+## Running locally (Laragon)
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+```bash
+composer install
+npm install && npm run build
+php artisan migrate --seed
+php artisan serve
+```
 
-### Premium Partners
+`.env` points at the Docker MySQL (`127.0.0.1:3306`, `smart` / `secret`) — make sure the
+`mysql` container is up, or adjust `DB_*` to your local MySQL.
 
-- **[Vehikl](https://vehikl.com/)**
-- **[Tighten Co.](https://tighten.co)**
-- **[WebReinvent](https://webreinvent.com/)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel/)**
-- **[Cyber-Duck](https://cyber-duck.co.uk)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Jump24](https://jump24.co.uk)**
-- **[Redberry](https://redberry.international/laravel/)**
-- **[Active Logic](https://activelogic.com)**
-- **[byte5](https://byte5.de)**
-- **[OP.GG](https://op.gg)**
+## Demo login
 
-## Contributing
+| Email | Password |
+|---|---|
+| `test@example.com` | `password` |
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+## Testing
 
-## Code of Conduct
+```bash
+php artisan test
+```
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+Tests run against an in-memory SQLite database (see `phpunit.xml`) — they never touch MySQL.
 
-## Security Vulnerabilities
+## Security notes
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+- `APP_KEY` is **not** committed anywhere. Locally it lives in `.env` (git-ignored); the
+  Docker entrypoint generates one per container unless `APP_KEY` is provided via environment.
+- The MySQL credentials in `docker-compose.yml` are for local development only. Do not
+  deploy this compose file: it publishes the database port, enables `APP_DEBUG`, and serves
+  via `php artisan serve` (a development server).
 
-## License
+## Project structure highlights
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+```
+app/Http/Controllers/Auth/     LoginController, RegisterController
+app/Http/Controllers/          DashboardController
+resources/views/layouts/       app.blade.php (authenticated), guest.blade.php (auth pages)
+resources/views/partials/      sidebar, topbar, footer
+resources/views/components/    shield-logo
+resources/css/                 login.css (auth pages), dashboard.css (app layout)
+```
+
+## Roadmap
+
+- Employees, Visitors, Cameras, Access Logs, Reports, Settings modules
+- Replace dashboard placeholder data with real queries (each `DashboardController`
+  private method documents the intended query)
+- Forgot Password flow
+- Role-based authorization

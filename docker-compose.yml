@@ -9,13 +9,25 @@ services:
       APP_ENV: local
       APP_DEBUG: "true"
       APP_URL: http://localhost:8000
-      APP_KEY: base64:X4vaspTXoHMuRiMm7CeZCCzN7ZkQMkTGlKkjaXm6tfU=
+      # APP_KEY is intentionally not set here: the entrypoint generates one
+      # inside the container. To keep sessions across container recreations,
+      # set APP_KEY in your shell environment or a git-ignored override file.
       DB_CONNECTION: mysql
       DB_HOST: mysql
       DB_PORT: "3306"
       DB_DATABASE: smart_security
       DB_USERNAME: smart
       DB_PASSWORD: secret
+    volumes:
+      # Live-mount source so PHP/Blade changes don't require an image rebuild.
+      # CSS/JS changes still need `npm run build` on the host (public/build is
+      # shared below). The .env file is NOT mounted: the container manages its own.
+      - ./app:/var/www/html/app
+      - ./routes:/var/www/html/routes
+      - ./resources:/var/www/html/resources
+      - ./config:/var/www/html/config
+      - ./database:/var/www/html/database
+      - ./public/build:/var/www/html/public/build
     depends_on:
       mysql:
         condition: service_healthy
@@ -28,6 +40,8 @@ services:
       MYSQL_PASSWORD: secret
       MYSQL_ROOT_PASSWORD: root
     ports:
+      # Published so host tools (artisan, GUI clients) can reach the DB.
+      # Local-development credentials only — never reuse this file for a deployment.
       - "3306:3306"
     volumes:
       - dbdata:/var/lib/mysql
