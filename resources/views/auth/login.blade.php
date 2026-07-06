@@ -46,9 +46,7 @@
                 @class(['is-invalid' => $errors->has('password')])
                 @if ($errors->has('password')) aria-invalid="true" @endif
             >
-            <button type="button" class="toggle-password" data-target="password" aria-label="Show password">
-                Show
-            </button>
+            <x-password-toggle target="password" />
         </div>
         @error('password')
             <p class="field-error" id="password-error" role="alert">{{ $message }}</p>
@@ -60,7 +58,7 @@
                 Remember Me
             </label>
 
-            <a href="#" class="forgot-link">Forgot Password?</a>
+            <a href="{{ route('password.request') }}" class="forgot-link">Forgot Password?</a>
         </div>
 
         <button type="submit" class="btn-login" data-loading-text="Signing in…">Login</button>

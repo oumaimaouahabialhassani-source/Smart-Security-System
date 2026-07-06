@@ -10,14 +10,17 @@
         <a href="{{ route('dashboard') }}" @class(['nav-link', 'active' => request()->routeIs('dashboard')])>
             <span class="nav-icon" aria-hidden="true">▦</span> Dashboard
         </a>
-        <a href="#" class="nav-link">
-            <span class="nav-icon" aria-hidden="true">◉</span> Employees
+        <a href="{{ route('users.index') }}" @class(['nav-link', 'active' => request()->routeIs('users.*')])>
+            <span class="nav-icon" aria-hidden="true">◉</span> Users
         </a>
         <a href="#" class="nav-link">
             <span class="nav-icon" aria-hidden="true">◈</span> Visitors
         </a>
-        <a href="#" class="nav-link">
+        <a href="{{ route('cameras.index') }}" @class(['nav-link', 'active' => request()->routeIs('cameras.*')])>
             <span class="nav-icon" aria-hidden="true">◎</span> Cameras
+        </a>
+        <a href="{{ route('devices.index') }}" @class(['nav-link', 'active' => request()->routeIs('devices.*')])>
+            <span class="nav-icon" aria-hidden="true">⬡</span> IoT Devices
         </a>
         <a href="#" class="nav-link">
             <span class="nav-icon" aria-hidden="true">≡</span> Access Logs

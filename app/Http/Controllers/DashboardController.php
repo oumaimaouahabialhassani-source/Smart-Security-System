@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Camera;
 use Illuminate\View\View;
 
 class DashboardController extends Controller
@@ -46,20 +47,20 @@ class DashboardController extends Controller
 
     /**
      * Camera availability — single source of truth for the stat card
-     * and the donut chart. Replace with Camera::online()->count() etc.
+     * and the donut chart.
      *
      * @return array{online: int, total: int, percent: int, meta: string}
      */
     private function cameraStatus(): array
     {
-        $online = 46;
-        $total = 48;
+        $total = Camera::count();
+        $online = Camera::online()->count();
 
         return [
             'online' => $online,
             'total' => $total,
-            'percent' => (int) round($online / $total * 100),
-            'meta' => ($total - $online).' offline — Zone C',
+            'percent' => $total > 0 ? (int) round($online / $total * 100) : 100,
+            'meta' => $total > 0 ? ($total - $online).' offline or in maintenance' : 'No cameras registered yet',
         ];
     }
 

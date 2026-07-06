@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers\Auth;
 
+use App\Enums\UserRole;
+use App\Enums\UserStatus;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
@@ -25,6 +27,8 @@ class RegisterController extends Controller
      */
     public function register(Request $request): RedirectResponse
     {
+        $request->merge(['email' => mb_strtolower(trim((string) $request->input('email')))]);
+
         $validated = $request->validate([
             'first_name' => ['required', 'string', 'max:100'],
             'last_name' => ['required', 'string', 'max:100'],
@@ -36,9 +40,12 @@ class RegisterController extends Controller
         ]);
 
         $user = User::create([
-            'name' => trim($validated['first_name'].' '.$validated['last_name']),
+            'first_name' => $validated['first_name'],
+            'last_name' => $validated['last_name'],
             'email' => $validated['email'],
             'password' => $validated['password'], // hashed by the model's "hashed" cast
+            'role' => UserRole::Employee,
+            'status' => UserStatus::Active,
         ]);
 
         Auth::login($user);

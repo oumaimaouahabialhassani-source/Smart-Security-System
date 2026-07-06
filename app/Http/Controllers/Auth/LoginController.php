@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Auth;
 
+use App\Enums\UserStatus;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -40,6 +41,14 @@ class LoginController extends Controller
             ]);
         }
 
+        $pending = \App\Models\User::where('email', $credentials['email'])->whereNull('password')->exists();
+
+        if ($pending) {
+            throw ValidationException::withMessages([
+                'email' => 'This account has no password yet. Use the link in your invitation email, or "Forgot Password?" below.',
+            ]);
+        }
+
         if (! Auth::attempt($credentials, $request->boolean('remember'))) {
             RateLimiter::hit($throttleKey);
 
@@ -48,7 +57,18 @@ class LoginController extends Controller
             ]);
         }
 
+        if (Auth::user()->status === UserStatus::Suspended) {
+            Auth::logout();
+            RateLimiter::hit($throttleKey);
+
+            throw ValidationException::withMessages([
+                'email' => 'This account has been suspended. Contact your administrator.',
+            ]);
+        }
+
         RateLimiter::clear($throttleKey);
+
+        Auth::user()->forceFill(['last_login' => now()])->save();
 
         $request->session()->regenerate();
 

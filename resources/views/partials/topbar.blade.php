@@ -13,7 +13,7 @@
         </button>
 
         <div class="user-chip">
-            <span class="avatar" aria-hidden="true">{{ strtoupper(substr(auth()->user()->name, 0, 1)) }}</span>
+            <x-user-avatar :user="auth()->user()" />
             <span class="user-name">{{ auth()->user()->name }}</span>
         </div>
     </div>

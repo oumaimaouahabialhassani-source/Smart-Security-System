@@ -82,9 +82,7 @@
                 @class(['is-invalid' => $errors->has('password')])
                 @if ($errors->has('password')) aria-invalid="true" @endif
             >
-            <button type="button" class="toggle-password" data-target="password" aria-label="Show password">
-                Show
-            </button>
+            <x-password-toggle target="password" />
         </div>
         @error('password')
             <p class="field-error" id="password-error" role="alert">{{ $message }}</p>
@@ -100,9 +98,7 @@
                 autocomplete="new-password"
                 required
             >
-            <button type="button" class="toggle-password" data-target="password_confirmation" aria-label="Show password">
-                Show
-            </button>
+            <x-password-toggle target="password_confirmation" />
         </div>
 
         <button type="submit" class="btn-login" data-loading-text="Creating account…">Create Account</button>
