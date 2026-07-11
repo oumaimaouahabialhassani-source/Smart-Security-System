@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # Smart Security System
 
 A Laravel 11 back-office for a physical security company: visitor management, biometric
@@ -83,3 +84,6 @@ against in-memory SQLite (see `phpunit.xml`) — they never touch MySQL.
   daily/weekly/monthly schedules are toggled from the Settings module.
 - **Frontend** — Blade + a single custom design system (`resources/css/dashboard.css`,
   dark/light themes), bundled with Vite. Run `npm run build` after CSS/JS changes.
+=======
+# Smart-Security-System
+>>>>>>> 247efc114c0cfd608fc7a4cc0e187423573f5162
