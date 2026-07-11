@@ -9,10 +9,12 @@
             <h1 class="page-title">IoT Devices Management</h1>
             <p class="page-subtitle">Monitor and manage all connected sensors, locks, readers and smart devices.</p>
         </div>
-        <a href="{{ route('devices.create') }}" class="btn btn-primary">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-            Add Device
-        </a>
+        @can('create', App\Models\Device::class)
+            <a href="{{ route('devices.create') }}" class="btn btn-primary">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                Add Device
+            </a>
+        @endcan
     </div>
 
     {{-- Summary stat cards --}}
@@ -219,15 +221,19 @@
                                     <a href="{{ route('devices.show', $device) }}" class="action-btn" title="View" aria-label="View {{ $device->name }}">
                                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>
                                     </a>
-                                    <a href="{{ route('devices.edit', $device) }}" class="action-btn" title="Edit" aria-label="Edit {{ $device->name }}">
-                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 3a2.85 2.85 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5z"/></svg>
-                                    </a>
-                                    <button type="button" class="action-btn action-danger js-delete" title="Delete"
-                                            aria-label="Delete {{ $device->name }}"
-                                            data-action="{{ route('devices.destroy', $device) }}"
-                                            data-name="{{ $device->name }} ({{ $device->device_id }})">
-                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
-                                    </button>
+                                    @can('update', $device)
+                                        <a href="{{ route('devices.edit', $device) }}" class="action-btn" title="Edit" aria-label="Edit {{ $device->name }}">
+                                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 3a2.85 2.85 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5z"/></svg>
+                                        </a>
+                                    @endcan
+                                    @can('delete', $device)
+                                        <button type="button" class="action-btn action-danger js-delete" title="Delete"
+                                                aria-label="Delete {{ $device->name }}"
+                                                data-action="{{ route('devices.destroy', $device) }}"
+                                                data-name="{{ $device->name }} ({{ $device->device_id }})">
+                                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                                        </button>
+                                    @endcan
                                 </div>
                             </td>
                         </tr>

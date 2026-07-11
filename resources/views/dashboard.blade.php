@@ -21,7 +21,7 @@
     {{-- Charts row --}}
     <section class="panels-grid">
         <div class="panel">
-            <h2 class="panel-title">Access Events — This Week</h2>
+            <h2 class="panel-title">Access Events — Last 7 Days</h2>
             <div class="bar-chart" role="img" aria-label="Bar chart of access events per day">
                 @foreach ($weeklyAccess as $day)
                     <div class="bar-col">
@@ -49,7 +49,47 @@
         </div>
     </section>
 
-    {{-- Recent activity --}}
+    {{-- Active alerts --}}
+    <section class="panel">
+        <h2 class="panel-title">
+            Active Alerts
+            @if ($alertTotal > count($alerts))
+                <span class="muted">(showing {{ count($alerts) }} of {{ $alertTotal }})</span>
+            @endif
+        </h2>
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Alert</th>
+                        <th>Item</th>
+                        <th>Location</th>
+                        <th>Severity</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @forelse ($alerts as $alert)
+                        <tr>
+                            <td>{{ $alert['label'] }}</td>
+                            <td><a href="{{ $alert['url'] }}">{{ $alert['name'] }}</a></td>
+                            <td>{{ $alert['location'] }}</td>
+                            <td>
+                                <span class="badge {{ $alert['severity'] === 'danger' ? 'badge-danger' : 'badge-warning' }}">
+                                    <span class="badge-indicator" aria-hidden="true"></span>{{ $alert['severity'] === 'danger' ? 'Critical' : 'Warning' }}
+                                </span>
+                            </td>
+                        </tr>
+                    @empty
+                        <tr>
+                            <td colspan="4" class="table-empty">No active alerts — all cameras and devices are healthy.</td>
+                        </tr>
+                    @endforelse
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    {{-- Recent access events --}}
     <section class="panel">
         <h2 class="panel-title">Recent Access Events</h2>
         <div class="table-wrap">
@@ -58,27 +98,32 @@
                     <tr>
                         <th>Time</th>
                         <th>Name</th>
-                        <th>Type</th>
                         <th>Door</th>
-                        <th>Status</th>
+                        <th>Direction</th>
+                        <th>Method</th>
+                        <th>Result</th>
                     </tr>
                 </thead>
                 <tbody>
-                    @foreach ($accessEvents as $event)
+                    @forelse ($accessEvents as $event)
                         <tr>
-                            <td>{{ $event['time'] }}</td>
-                            <td>{{ $event['name'] }}</td>
-                            <td>{{ $event['type'] }}</td>
-                            <td>{{ $event['door'] }}</td>
-                            <td>
-                                <span class="status {{ $event['status'] === 'Granted' ? 'status-granted' : 'status-denied' }}">
-                                    {{ $event['status'] }}
-                                </span>
-                            </td>
+                            <td title="{{ $event->happened_at->format('Y-m-d H:i:s') }}">{{ $event->happened_at->diffForHumans() }}</td>
+                            <td>{{ $event->person_name }}</td>
+                            <td>{{ $event->door?->name ?? '—' }}</td>
+                            <td>{{ ucfirst($event->direction ?? '—') }}</td>
+                            <td>{{ ucfirst($event->method ?? '—') }}</td>
+                            <td><x-status-badge :status="$event->result" /></td>
                         </tr>
-                    @endforeach
+                    @empty
+                        <tr>
+                            <td colspan="6" class="table-empty">No access events yet — check a visitor in or run a biometric verification.</td>
+                        </tr>
+                    @endforelse
                 </tbody>
             </table>
+        </div>
+        <div class="table-footer">
+            <a href="{{ route('access.logs') }}" class="btn btn-ghost">View all access logs →</a>
         </div>
     </section>
 

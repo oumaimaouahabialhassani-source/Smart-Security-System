@@ -1,55 +1,63 @@
 # Smart Security System
 
-A Laravel 11 application for facility security management: authentication, a security
-dashboard, and (upcoming) modules for employees, visitors, cameras, access logs and reports.
+A Laravel 11 back-office for a physical security company: visitor management, biometric
+enrollment & verification, door access control, real-time alerts, audit trail and
+cross-module analytics — all behind role-based access control.
 
-## Features
+## Modules
 
-- **Authentication** — login, registration, logout with CSRF protection, login rate
-  limiting (5 attempts per email + IP), session regeneration, and Remember Me.
-- **Dashboard** — security overview with stat cards, weekly access chart, camera status,
-  and a recent access events table (placeholder data until the domain modules land).
-- **Shared layouts** — `layouts/app.blade.php` (sidebar, topbar, footer) for authenticated
-  pages, `layouts/guest.blade.php` for auth pages.
+| Module | Description | Access |
+|---|---|---|
+| Dashboard | Live security overview built from real access events | All roles |
+| Users | Staff accounts, roles, status (active / inactive / suspended) | Administrator |
+| Visitors | Registration, check-in/out, printable badge & visitor pass, blacklist | All view · manage: Admin, Security Officer, Receptionist |
+| Cameras | CCTV inventory, status, maintenance | All view · manage: Admin, Security Officer |
+| IoT Devices | Sensors & controllers, battery / signal monitoring | All view · manage: Admin, Security Officer |
+| Biometrics | Face / fingerprint / iris enrollment, identity verification, device panel | All view · enroll/verify: Admin, Security Officer |
+| Access Control | Permissions (permanent & temporary), door lock/unlock, lockdown, logs, live feed | All view · manage: Admin, Security Officer |
+| Alerts | SOC page: lifecycle, assignment, facility map, insights, notification prefs | All view · manage: Admin, Security Officer |
+| Reports & Analytics | Cross-module KPIs, charts, heatmap, CSV exports | Administrator, Manager |
+| Settings | 10 groups incl. security policy, SMTP, appearance, backups | Administrator |
+| Audit Logs | Automatic activity trail (observers + auth events) | Administrator |
+
+## Roles
+
+`Administrator` (full control) · `Security Officer` (operations: visitors, biometrics,
+access, alerts, hardware) · `Manager` (viewer + Reports) · `Receptionist` (visitor
+registration + temporary access) · `Employee` (viewer).
+
+Public self-registration is intentionally disabled — accounts are created by an
+Administrator from the Users module.
 
 ## Requirements
 
 - PHP 8.2+ (Laragon ships 8.3 at `C:\laragon\bin\php\php-8.3.30-Win32-vs16-x64\php.exe`)
 - Composer, Node.js 20+
-- MySQL 8 (or use the bundled Docker setup)
+- MySQL 8
 
-## Running with Docker (recommended)
-
-```bash
-docker compose up -d --build
-```
-
-- App: http://localhost:8000 — MySQL is published on `localhost:3306` (`smart` / `secret`).
-- Migrations run automatically on container start (see `docker/entrypoint.sh`).
-- Seed the demo user: `docker compose exec app php artisan db:seed`
-
-**Live code:** `app/`, `routes/`, `resources/`, `config/` and `database/` are volume-mounted,
-so PHP and Blade changes apply immediately. CSS/JS changes need `npm run build` on the host
-(`public/build` is shared with the container). Only changes to `composer.json`, `package.json`
-or the Dockerfile itself require `docker compose build app`.
-
-## Running locally (Laragon)
+## Quick start (local)
 
 ```bash
 composer install
 npm install && npm run build
+cp .env.example .env && php artisan key:generate   # then set DB_* credentials
 php artisan migrate --seed
 php artisan serve
 ```
 
-`.env` points at the Docker MySQL (`127.0.0.1:3306`, `smart` / `secret`) — make sure the
-`mysql` container is up, or adjust `DB_*` to your local MySQL.
+Full instructions: [docs/INSTALLATION.md](docs/INSTALLATION.md) ·
+Production: [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) ·
+Usage: [docs/USER-MANUAL.md](docs/USER-MANUAL.md)
 
-## Demo login
+## Demo accounts (seeded)
 
-| Email | Password |
-|---|---|
-| `test@example.com` | `password` |
+| Email | Password | Role |
+|---|---|---|
+| `admin@smartsecurity.test` | `password` | Administrator |
+| `employee.test@smartsecurity.test` | `password` | Employee (viewer) |
+
+The seeder also creates demo staff, 18 cameras, 22 devices, 40 visits, biometric
+profiles, 8 doors, ~320 access events and 73 alerts so every screen has data.
 
 ## Testing
 
@@ -57,31 +65,21 @@ php artisan serve
 php artisan test
 ```
 
-Tests run against an in-memory SQLite database (see `phpunit.xml`) — they never touch MySQL.
+37 feature tests (auth, registration lockout, RBAC, settings, audit, reports) run
+against in-memory SQLite (see `phpunit.xml`) — they never touch MySQL.
 
-## Security notes
+## Architecture notes
 
-- `APP_KEY` is **not** committed anywhere. Locally it lives in `.env` (git-ignored); the
-  Docker entrypoint generates one per container unless `APP_KEY` is provided via environment.
-- The MySQL credentials in `docker-compose.yml` are for local development only. Do not
-  deploy this compose file: it publishes the database port, enables `APP_DEBUG`, and serves
-  via `php artisan serve` (a development server).
-
-## Project structure highlights
-
-```
-app/Http/Controllers/Auth/     LoginController, RegisterController
-app/Http/Controllers/          DashboardController
-resources/views/layouts/       app.blade.php (authenticated), guest.blade.php (auth pages)
-resources/views/partials/      sidebar, topbar, footer
-resources/views/components/    shield-logo
-resources/css/                 login.css (auth pages), dashboard.css (app layout)
-```
-
-## Roadmap
-
-- Employees, Visitors, Cameras, Access Logs, Reports, Settings modules
-- Replace dashboard placeholder data with real queries (each `DashboardController`
-  private method documents the intended query)
-- Forgot Password flow
-- Role-based authorization
+- **Authorization** — role permissions live on the `App\Enums\UserRole` enum
+  (`canManageVisitors()`, `canViewReports()`, …), enforced through Policies,
+  FormRequest `authorize()` and controller guards. The `active` middleware logs out
+  suspended/inactive users on their next request.
+- **Audit logging** — a generic `App\Observers\Auditable` observer watches 11 models,
+  plus listeners on Laravel's Login/Logout/Failed/PasswordReset events. No logging
+  code in controllers.
+- **Settings** — key/value store cached forever (`settings.all`), applied to runtime
+  config (app name, timezone, session lifetime, mail) in `AppServiceProvider`.
+- **Backups** — `php artisan backup:run` produces a SQL dump in `storage/app/backups`;
+  daily/weekly/monthly schedules are toggled from the Settings module.
+- **Frontend** — Blade + a single custom design system (`resources/css/dashboard.css`,
+  dark/light themes), bundled with Vite. Run `npm run build` after CSS/JS changes.

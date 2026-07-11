@@ -11,7 +11,9 @@
         </div>
         <div class="page-head-actions">
             <a href="{{ route('cameras.index') }}" class="btn btn-secondary">← Back to Cameras</a>
-            <a href="{{ route('cameras.edit', $camera) }}" class="btn btn-primary">Edit Camera</a>
+            @can('update', $camera)
+                <a href="{{ route('cameras.edit', $camera) }}" class="btn btn-primary">Edit Camera</a>
+            @endcan
         </div>
     </div>
 

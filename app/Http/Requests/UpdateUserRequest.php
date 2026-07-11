@@ -6,7 +6,6 @@ use App\Enums\UserRole;
 use App\Enums\UserStatus;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
-use Illuminate\Validation\Rules\Password;
 
 class UpdateUserRequest extends FormRequest
 {
@@ -15,7 +14,7 @@ class UpdateUserRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        return true;
+        return $this->user()->role->canManageUsers();
     }
 
     /**
@@ -44,7 +43,7 @@ class UpdateUserRequest extends FormRequest
             ],
             'phone' => ['required', 'string', 'max:30'],
             // Password is optional on edit — leave blank to keep the current one.
-            'password' => ['nullable', 'confirmed', Password::min(8)],
+            'password' => ['nullable', 'confirmed', \App\Support\PasswordPolicy::rule()],
             'role' => ['required', Rule::enum(UserRole::class)],
             'status' => ['required', Rule::enum(UserStatus::class)],
             'avatar' => ['nullable', 'image', 'max:2048'],

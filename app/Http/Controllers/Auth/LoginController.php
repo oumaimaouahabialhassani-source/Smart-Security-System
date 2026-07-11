@@ -33,7 +33,11 @@ class LoginController extends Controller
 
         $throttleKey = strtolower($request->input('email')).'|'.$request->ip();
 
-        if (RateLimiter::tooManyAttempts($throttleKey, 5)) {
+        // Attempt ceiling and lock duration come from the Security settings.
+        $maxAttempts = (int) \App\Models\Setting::get('security.max_login_attempts', 5);
+        $lockSeconds = (int) \App\Models\Setting::get('security.lock_duration_minutes', 1) * 60;
+
+        if (RateLimiter::tooManyAttempts($throttleKey, $maxAttempts)) {
             throw ValidationException::withMessages([
                 'email' => __('auth.throttle', [
                     'seconds' => RateLimiter::availableIn($throttleKey),
@@ -41,28 +45,24 @@ class LoginController extends Controller
             ]);
         }
 
-        $pending = \App\Models\User::where('email', $credentials['email'])->whereNull('password')->exists();
-
-        if ($pending) {
-            throw ValidationException::withMessages([
-                'email' => 'This account has no password yet. Use the link in your invitation email, or "Forgot Password?" below.',
-            ]);
-        }
-
+        // Note: accounts pending their invitation email (null password)
+        // fail here with the same generic message, so the form cannot
+        // be used to probe which emails exist in the system.
         if (! Auth::attempt($credentials, $request->boolean('remember'))) {
-            RateLimiter::hit($throttleKey);
+            RateLimiter::hit($throttleKey, $lockSeconds);
 
             throw ValidationException::withMessages([
                 'email' => __('auth.failed'),
             ]);
         }
 
-        if (Auth::user()->status === UserStatus::Suspended) {
+        if (Auth::user()->status !== UserStatus::Active) {
+            $status = Auth::user()->status;
             Auth::logout();
-            RateLimiter::hit($throttleKey);
+            RateLimiter::hit($throttleKey, $lockSeconds);
 
             throw ValidationException::withMessages([
-                'email' => 'This account has been suspended. Contact your administrator.',
+                'email' => 'This account is '.strtolower($status->label()).'. Contact your administrator.',
             ]);
         }
 

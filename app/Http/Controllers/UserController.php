@@ -21,6 +21,8 @@ class UserController extends Controller
      */
     public function index(Request $request): View
     {
+        $this->authorize('viewAny', User::class);
+
         $users = User::query()
             ->search($request->query('search'))
             ->when($request->query('role'), fn ($q, $role) => $q->where('role', $role))
@@ -41,6 +43,8 @@ class UserController extends Controller
      */
     public function create(): View
     {
+        $this->authorize('create', User::class);
+
         return view('users.create', [
             'roles' => UserRole::cases(),
             'statuses' => UserStatus::cases(),
@@ -72,6 +76,8 @@ class UserController extends Controller
      */
     public function show(User $user): View
     {
+        $this->authorize('view', $user);
+
         return view('users.show', ['user' => $user]);
     }
 
@@ -80,6 +86,8 @@ class UserController extends Controller
      */
     public function edit(User $user): View
     {
+        $this->authorize('update', $user);
+
         return view('users.edit', [
             'user' => $user,
             'roles' => UserRole::cases(),
@@ -93,6 +101,14 @@ class UserController extends Controller
     public function update(UpdateUserRequest $request, User $user): RedirectResponse
     {
         $data = $request->validated();
+
+        // Never demote, suspend or deactivate the last administrator
+        // still able to sign in — the system would become unmanageable.
+        if (\App\Policies\UserPolicy::isLastActiveAdministrator($user)
+            && ($data['role'] !== \App\Enums\UserRole::Administrator->value || $data['status'] !== \App\Enums\UserStatus::Active->value)) {
+            return redirect()->route('users.edit', $user)
+                ->with('error', "{$user->name} is the last active administrator — their role and status cannot be changed.");
+        }
 
         if (empty($data['password'])) {
             unset($data['password']);
@@ -116,9 +132,16 @@ class UserController extends Controller
      */
     public function destroy(Request $request, User $user): RedirectResponse
     {
+        abort_unless($request->user()->role->canManageUsers(), 403);
+
         if ($user->is($request->user())) {
             return redirect()->route('users.index')
                 ->with('error', 'You cannot delete your own account while signed in.');
+        }
+
+        if (\App\Policies\UserPolicy::isLastActiveAdministrator($user)) {
+            return redirect()->route('users.index')
+                ->with('error', "{$user->name} is the last active administrator and cannot be deleted.");
         }
 
         if ($user->avatar) {

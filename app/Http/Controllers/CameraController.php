@@ -48,6 +48,8 @@ class CameraController extends Controller
      */
     public function create(): View
     {
+        $this->authorize('create', Camera::class);
+
         return view('cameras.create', $this->formOptions());
     }
 
@@ -78,6 +80,8 @@ class CameraController extends Controller
      */
     public function edit(Camera $camera): View
     {
+        $this->authorize('update', $camera);
+
         return view('cameras.edit', ['camera' => $camera] + $this->formOptions());
     }
 
@@ -104,6 +108,8 @@ class CameraController extends Controller
      */
     public function destroy(Camera $camera): RedirectResponse
     {
+        $this->authorize('delete', $camera);
+
         $name = $camera->name;
         $camera->delete();
 

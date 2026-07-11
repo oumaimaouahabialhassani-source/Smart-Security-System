@@ -33,10 +33,9 @@ class UserFactory extends Factory
             'email_verified_at' => now(),
             'password' => static::$password ??= Hash::make('password'),
             'role' => fake()->randomElement(UserRole::cases()),
-            'status' => fake()->randomElement([
-                UserStatus::Active, UserStatus::Active, UserStatus::Active,
-                UserStatus::Inactive, UserStatus::Suspended,
-            ]),
+            // Deterministic default so tests are stable; use the
+            // inactive()/suspended() states for other statuses.
+            'status' => UserStatus::Active,
             'last_login' => fake()->optional(0.8)->dateTimeBetween('-30 days'),
             'remember_token' => Str::random(10),
         ];
@@ -50,5 +49,15 @@ class UserFactory extends Factory
         return $this->state(fn (array $attributes) => [
             'email_verified_at' => null,
         ]);
+    }
+
+    public function inactive(): static
+    {
+        return $this->state(fn () => ['status' => UserStatus::Inactive]);
+    }
+
+    public function suspended(): static
+    {
+        return $this->state(fn () => ['status' => UserStatus::Suspended]);
     }
 }

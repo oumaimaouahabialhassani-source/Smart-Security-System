@@ -66,8 +66,7 @@
     </form>
 
     <p class="auth-switch">
-        Don't have an account?
-        <a href="{{ route('register') }}">Create one</a>
+        No account? Access is granted by your administrator.
     </p>
 
 @endsection

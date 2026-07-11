@@ -11,7 +11,9 @@
         </div>
         <div class="page-head-actions">
             <a href="{{ route('devices.index') }}" class="btn btn-secondary">← Back to Devices</a>
-            <a href="{{ route('devices.edit', $device) }}" class="btn btn-primary">Edit Device</a>
+            @can('update', $device)
+                <a href="{{ route('devices.edit', $device) }}" class="btn btn-primary">Edit Device</a>
+            @endcan
         </div>
     </div>
 

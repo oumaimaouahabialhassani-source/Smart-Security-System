@@ -56,6 +56,7 @@ class User extends Authenticatable
             'role' => UserRole::class,
             'status' => UserStatus::class,
             'last_login' => 'datetime',
+            'notification_preferences' => 'array',
         ];
     }
 
@@ -83,6 +84,31 @@ class User extends Authenticatable
     protected function avatarUrl(): Attribute
     {
         return Attribute::get(fn () => $this->avatar ? Storage::url($this->avatar) : null);
+    }
+
+    /**
+     * The user's biometric enrollment profile, if any.
+     */
+    public function biometricProfile(): \Illuminate\Database\Eloquent\Relations\HasOne
+    {
+        return $this->hasOne(BiometricProfile::class);
+    }
+
+    /**
+     * Should this user receive an in-app notification for an alert of
+     * the given severity? Honors the "critical only" preference saved
+     * from the Alerts notification settings panel.
+     */
+    public function wantsAlertNotification(\App\Enums\AlertSeverity $severity): bool
+    {
+        $preferences = $this->notification_preferences ?? [];
+
+        if (($preferences['critical_only'] ?? false)
+            && ! in_array($severity, [\App\Enums\AlertSeverity::Critical, \App\Enums\AlertSeverity::High], true)) {
+            return false;
+        }
+
+        return true;
     }
 
     /**

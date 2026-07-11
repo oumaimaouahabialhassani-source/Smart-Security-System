@@ -58,6 +58,8 @@ class DeviceController extends Controller
      */
     public function create(): View
     {
+        $this->authorize('create', Device::class);
+
         return view('devices.create', $this->formOptions());
     }
 
@@ -85,6 +87,8 @@ class DeviceController extends Controller
      */
     public function edit(Device $device): View
     {
+        $this->authorize('update', $device);
+
         return view('devices.edit', ['device' => $device] + $this->formOptions());
     }
 
@@ -110,6 +114,8 @@ class DeviceController extends Controller
      */
     public function destroy(Device $device): RedirectResponse
     {
+        $this->authorize('delete', $device);
+
         $name = $device->name;
         $device->delete();
 
