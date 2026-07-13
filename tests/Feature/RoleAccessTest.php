@@ -3,7 +3,6 @@
 namespace Tests\Feature;
 
 use App\Enums\UserRole;
-use App\Enums\UserStatus;
 use App\Models\Camera;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -23,29 +22,12 @@ class RoleAccessTest extends TestCase
         return User::factory()->create(['role' => UserRole::Viewer]);
     }
 
-    public function test_employee_cannot_open_users_module(): void
+    public function test_users_module_is_removed(): void
     {
-        $this->actingAs($this->employee())
-            ->get('/users')
-            ->assertForbidden();
-    }
-
-    public function test_employee_cannot_create_users(): void
-    {
-        $this->actingAs($this->employee())->get('/users/create')->assertForbidden();
-
-        $this->actingAs($this->employee())->post('/users', [
-            'first_name' => 'X', 'last_name' => 'Y',
-            'email' => 'x@y.test', 'phone' => '0600000000',
-            'role' => 'employee', 'status' => 'active',
-        ])->assertForbidden();
-    }
-
-    public function test_administrator_can_open_users_module(): void
-    {
-        $this->actingAs($this->admin())
-            ->get('/users')
-            ->assertOk();
+        // Single-account mode: user management no longer exists.
+        $this->actingAs($this->admin())->get('/users')->assertNotFound();
+        $this->actingAs($this->admin())->get('/users/create')->assertNotFound();
+        $this->actingAs($this->admin())->post('/users', [])->assertNotFound();
     }
 
     public function test_employee_cannot_manage_cameras_but_can_view_them(): void
@@ -93,36 +75,4 @@ class RoleAccessTest extends TestCase
         $this->assertGuest();
     }
 
-    public function test_the_edit_form_never_changes_roles(): void
-    {
-        $admin = $this->admin(); // the only active Super Admin
-
-        // The edit form has no role field; a forged role value is
-        // silently discarded and the account keeps its role.
-        $this->actingAs($admin)->put('/users/'.$admin->id, [
-            'first_name' => $admin->first_name,
-            'last_name' => $admin->last_name,
-            'email' => $admin->email,
-            'phone' => '0600000000',
-            'role' => UserRole::Viewer->value,
-            'status' => UserStatus::Active->value,
-        ])->assertRedirect(route('users.index'));
-
-        $this->assertSame(UserRole::SuperAdmin, $admin->fresh()->role);
-    }
-
-    public function test_the_last_active_super_admin_cannot_be_deleted(): void
-    {
-        $admin = $this->admin();
-        $suspendedAdmin = User::factory()->suspended()->create(['role' => UserRole::SuperAdmin]);
-
-        // A suspended (not last-active) Super Admin may be deleted…
-        $this->actingAs($admin)->delete('/users/'.$suspendedAdmin->id);
-        $this->assertDatabaseMissing('users', ['id' => $suspendedAdmin->id]);
-
-        // …but the last active one (also self here) never can be.
-        $response = $this->actingAs($admin)->delete('/users/'.$admin->id);
-        $response->assertSessionHas('error');
-        $this->assertDatabaseHas('users', ['id' => $admin->id]);
-    }
 }

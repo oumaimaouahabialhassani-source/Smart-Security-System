@@ -56,6 +56,16 @@ class LoginController extends Controller
             ]);
         }
 
+        // Single-account mode: only the Super Admin may sign in.
+        if (Auth::user()->role !== \App\Enums\UserRole::SuperAdmin) {
+            Auth::logout();
+            RateLimiter::hit($throttleKey, $lockSeconds);
+
+            throw ValidationException::withMessages([
+                'email' => __('auth.failed'),
+            ]);
+        }
+
         if (Auth::user()->status !== UserStatus::Active) {
             $status = Auth::user()->status;
             Auth::logout();
@@ -74,6 +84,16 @@ class LoginController extends Controller
 
         return redirect()->intended(route('dashboard'))
             ->with('status', 'Welcome back, '.Auth::user()->name.'!');
+    }
+
+    /**
+     * A GET on /logout performs no action (logout requires the
+     * CSRF-protected POST); it just routes the visitor somewhere
+     * sensible instead of a "405 Method Not Allowed" page.
+     */
+    public function logoutRedirect(): RedirectResponse
+    {
+        return redirect(Auth::check() ? route('dashboard') : route('login'));
     }
 
     /**

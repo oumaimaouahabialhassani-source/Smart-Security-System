@@ -25,7 +25,6 @@ class EnsureModuleAccess
             'reports' => $role?->canViewReports(),
             'audit' => $role?->canViewAuditLogs(),
             'settings' => $role?->canManageSettings(),
-            'users' => $role?->canManageUsers(),
             default => false,
         };
 

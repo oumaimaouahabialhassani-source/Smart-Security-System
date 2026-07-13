@@ -29,8 +29,7 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        // Exactly two accounts: the single unrestricted Super Admin
-        // and the single read-only Viewer.
+        // Exactly one account: the Super Admin.
         User::firstOrCreate(
             ['email' => 'admin@smartsecurity.test'],
             [
@@ -39,18 +38,6 @@ class DatabaseSeeder extends Seeder
                 'phone' => '+212 600 000 000',
                 'password' => 'password', // hashed by the model's "hashed" cast
                 'role' => UserRole::SuperAdmin,
-                'status' => UserStatus::Active,
-            ],
-        );
-
-        User::firstOrCreate(
-            ['email' => 'viewer@smartsecurity.test'],
-            [
-                'first_name' => 'Vera',
-                'last_name' => 'Viewer',
-                'phone' => '+212 611 111 111',
-                'password' => 'password', // hashed by the model's "hashed" cast
-                'role' => UserRole::Viewer,
                 'status' => UserStatus::Active,
             ],
         );

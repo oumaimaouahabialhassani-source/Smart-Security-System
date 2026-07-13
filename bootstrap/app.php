@@ -11,6 +11,15 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware) {
+        // Logout must never dead-end on "419 Page Expired". When the
+        // session already expired (second tab, double-click, timeout),
+        // the POST carries a stale CSRF token; validating it would
+        // block the one action the user obviously wants. Worst case of
+        // exempting it: someone can force a logout — an annoyance, not
+        // a breach. The logout handler still invalidates the session
+        // and regenerates the token.
+        $middleware->validateCsrfTokens(except: ['logout']);
+
         $middleware->alias([
             'active' => \App\Http\Middleware\EnsureUserIsActive::class,
             'ai.bot' => \App\Http\Middleware\EnsureAiBotAccess::class,

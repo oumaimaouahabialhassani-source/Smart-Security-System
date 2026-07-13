@@ -1,0 +1,11 @@
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+
+    # Forward every request into the Laravel front controller in public/.
+    # This lets the app work even when a web server's document root is
+    # the project root instead of public/ (e.g. Laragon's default www
+    # docroot, opening http://localhost/smart-security/). Without this,
+    # requests like /logout have no matching file and Apache returns 404
+    # before Laravel's router ever runs.
+    RewriteRule ^(.*)$ public/$1 [L]
+</IfModule>

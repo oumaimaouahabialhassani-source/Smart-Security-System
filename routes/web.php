@@ -12,7 +12,6 @@ use App\Http\Controllers\CameraController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DeviceController;
 use App\Http\Controllers\SettingController;
-use App\Http\Controllers\UserController;
 use App\Http\Controllers\VisitorController;
 
 Route::middleware('guest')->group(function () {
@@ -52,9 +51,6 @@ Route::middleware(['auth', 'active'])->group(function () {
 
     // Route::view (not a closure) so `php artisan route:cache` works.
     Route::view('/help', 'help.index')->name('help.index');
-
-    Route::patch('/users/{user}/role', [UserController::class, 'role'])->name('users.role');
-    Route::resource('users', UserController::class)->middleware('module:users');
 
     Route::get('/cameras/live', [CameraController::class, 'live'])->name('cameras.live');
     Route::get('/cameras/live/feed', [CameraController::class, 'liveFeed'])->name('cameras.live-feed');
@@ -145,3 +141,9 @@ Route::middleware(['auth', 'active'])->group(function () {
 
     Route::post('/logout', [LoginController::class, 'logout'])->name('logout');
 });
+
+// Navigating to /logout directly (GET) must not dead-end on a
+// "405 Method Not Allowed" page. No state changes here — logging out
+// still requires the CSRF-protected POST above; this just routes the
+// visitor somewhere sensible.
+Route::get('/logout', [LoginController::class, 'logoutRedirect']);

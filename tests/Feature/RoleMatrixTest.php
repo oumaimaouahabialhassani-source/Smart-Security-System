@@ -31,8 +31,6 @@ class RoleMatrixTest extends TestCase
         '/ai-bot' => ['super_admin', 'viewer'],
         '/ai-bot/analytics' => ['super_admin', 'viewer'],
         '/ai-bot/chat' => ['super_admin'],
-        '/users' => ['super_admin'],
-        '/users/create' => ['super_admin'],
         '/notifications' => ['super_admin', 'viewer'],
         '/help' => ['super_admin', 'viewer'],
         '/reports' => ['super_admin', 'viewer'],

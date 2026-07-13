@@ -16,11 +16,6 @@
         <a href="{{ route('dashboard') }}" @class(['nav-link', 'active' => request()->routeIs('dashboard')])>
             <span class="nav-icon" aria-hidden="true">▦</span> Dashboard
         </a>
-        @can('viewAny', App\Models\User::class)
-            <a href="{{ route('users.index') }}" @class(['nav-link', 'active' => request()->routeIs('users.*')])>
-                <span class="nav-icon" aria-hidden="true">◉</span> Users
-            </a>
-        @endcan
         @if ($role->canViewVisitors())
             <a href="{{ route('visitors.index') }}" @class(['nav-link', 'active' => request()->routeIs('visitors.*')])>
                 <span class="nav-icon" aria-hidden="true">◈</span> Visitors
@@ -89,7 +84,9 @@
         </a>
     </nav>
 
-    <form method="POST" action="{{ route('logout') }}" class="sidebar-logout">
+    {{-- data-loading disables the button after the first click, so a
+         double-click can't fire a second POST with a stale token. --}}
+    <form method="POST" action="{{ route('logout') }}" class="sidebar-logout" data-loading>
         @csrf
         <button type="submit" class="nav-link logout-btn">
             <span class="nav-icon" aria-hidden="true">⏻</span> Logout
