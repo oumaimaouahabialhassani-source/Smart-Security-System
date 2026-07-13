@@ -25,20 +25,31 @@
             const form = document.getElementById('delete-modal-form');
             const nameEl = document.getElementById('delete-modal-name');
 
+            let opener = null;
+
             document.querySelectorAll('.js-delete').forEach((btn) => {
                 btn.addEventListener('click', () => {
                     form.action = btn.dataset.action;
                     nameEl.textContent = btn.dataset.name;
                     modal.hidden = false;
+                    opener = btn;
+                    // Move keyboard focus into the dialog; restored on close.
+                    modal.querySelector('[data-close-modal]').focus();
                 });
             });
 
+            const close = () => {
+                modal.hidden = true;
+                opener?.focus();
+                opener = null;
+            };
+
             modal.addEventListener('click', (e) => {
-                if (e.target === modal || e.target.closest('[data-close-modal]')) modal.hidden = true;
+                if (e.target === modal || e.target.closest('[data-close-modal]')) close();
             });
 
             document.addEventListener('keydown', (e) => {
-                if (e.key === 'Escape') modal.hidden = true;
+                if (e.key === 'Escape' && !modal.hidden) close();
             });
         })();
     </script>

@@ -1,7 +1,9 @@
 <header class="topbar">
-    <div class="search-box">
-        <input type="search" placeholder="Search employees, visitors, logs…" aria-label="Search">
-    </div>
+    {{-- Searches the current module: submits ?search=… to the page you are on. --}}
+    <form class="search-box" method="GET" action="{{ url()->current() }}" role="search">
+        <input type="search" name="search" value="{{ request('search') }}"
+               placeholder="Search this page — employees, visitors, logs…" aria-label="Search this page">
+    </form>
 
     <div class="topbar-actions">
         <div class="notif-wrap">
@@ -45,19 +47,33 @@
     const esc = (value) => String(value ?? '').replace(/[&<>"']/g,
         (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
+    function setCount(unread) {
+        count.textContent = unread > 99 ? '99+' : unread;
+        count.hidden = unread === 0;
+        bell.setAttribute('aria-label', 'Notifications — ' + unread + ' unread');
+    }
+
     function render(data) {
-        count.textContent = data.unread > 99 ? '99+' : data.unread;
-        count.hidden = data.unread === 0;
-        bell.setAttribute('aria-label', 'Notifications — ' + data.unread + ' unread');
+        setCount(data.unread);
 
         items.innerHTML = data.items.length
             ? data.items.map((n) => `
-                <a href="{{ route('alerts.index') }}" class="notif-item${n.read ? '' : ' unread'}" data-id="${esc(n.id)}">
+                <a href="${esc(n.url || '{{ route('alerts.index') }}')}" class="notif-item${n.read ? '' : ' unread'}" data-id="${esc(n.id)}" data-read="${n.read ? 1 : 0}">
                     <span class="badge ${esc(n.badge)}">${esc(n.severity)}</span>
                     <span class="notif-body"><strong>${esc(n.title)}</strong><span>${esc(n.detail)}</span></span>
                     <span class="notif-time">${esc(n.time)}</span>
                 </a>`).join('')
             : '<p class="notif-empty">No notifications yet.</p>';
+    }
+
+    // Small toast in the bottom-right corner, reusing the flash styling.
+    function toast(message, ok = true) {
+        const el = document.createElement('div');
+        el.className = 'flash ' + (ok ? 'flash-success' : 'flash-error') + ' toast';
+        el.setAttribute('role', 'status');
+        el.textContent = message;
+        document.body.appendChild(el);
+        setTimeout(() => el.remove(), 3500);
     }
 
     function refresh() {
@@ -81,25 +97,48 @@
         }
     });
 
+    // Clicking a notification marks only that one as read (keepalive:
+    // the request survives the navigation to the related alert page).
     items.addEventListener('click', (e) => {
         const item = e.target.closest('.notif-item');
-        if (item && item.dataset.id) {
+        if (item && item.dataset.id && item.dataset.read !== '1') {
+            item.classList.remove('unread');
+            item.dataset.read = '1';
+            setCount(Math.max(0, (parseInt(count.textContent, 10) || 0) - 1));
             fetch('/notifications/' + item.dataset.id + '/read', {
                 method: 'POST',
-                headers: { 'X-CSRF-TOKEN': csrf },
+                headers: { 'X-CSRF-TOKEN': csrf, Accept: 'application/json' },
                 keepalive: true,
             });
         }
     });
 
-    document.getElementById('notif-readall').addEventListener('click', () => {
-        fetch('{{ route('notifications.read-all') }}', {
-            method: 'POST',
-            headers: { 'X-CSRF-TOKEN': csrf },
-        }).then(refresh);
+    document.getElementById('notif-readall')?.addEventListener('click', async () => {
+        // Optimistic UI: clear the badge and unread styling immediately.
+        setCount(0);
+        items.querySelectorAll('.notif-item.unread').forEach((el) => {
+            el.classList.remove('unread');
+            el.dataset.read = '1';
+        });
+
+        try {
+            const res = await fetch('{{ route('notifications.read-all') }}', {
+                method: 'POST',
+                headers: { 'X-CSRF-TOKEN': csrf, Accept: 'application/json' },
+            });
+            if (!res.ok) throw new Error(res.status);
+            toast('All notifications marked as read.');
+        } catch (_) {
+            toast('Could not mark notifications as read — please try again.', false);
+        }
+
+        refresh(); // resync with the server either way
     });
 
     refresh();
-    setInterval(refresh, 20000);
+    // Poll only while the tab is visible; refresh immediately when the
+    // user comes back so the bell never looks stale.
+    setInterval(() => { if (!document.hidden) refresh(); }, 30000);
+    document.addEventListener('visibilitychange', () => { if (!document.hidden) refresh(); });
 })();
 </script>

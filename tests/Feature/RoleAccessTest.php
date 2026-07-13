@@ -15,12 +15,12 @@ class RoleAccessTest extends TestCase
 
     private function admin(): User
     {
-        return User::factory()->create(['role' => UserRole::Administrator]);
+        return User::factory()->create(['role' => UserRole::SuperAdmin]);
     }
 
     private function employee(): User
     {
-        return User::factory()->create(['role' => UserRole::Employee]);
+        return User::factory()->create(['role' => UserRole::Viewer]);
     }
 
     public function test_employee_cannot_open_users_module(): void
@@ -61,12 +61,14 @@ class RoleAccessTest extends TestCase
         $this->assertDatabaseHas('cameras', ['id' => $camera->id]);
     }
 
-    public function test_security_officer_can_edit_but_not_delete_cameras(): void
+    public function test_security_operator_monitors_cameras_read_only(): void
     {
-        $officer = User::factory()->create(['role' => UserRole::SecurityOfficer]);
+        $officer = User::factory()->create(['role' => UserRole::Viewer]);
         $camera = Camera::factory()->create();
 
-        $this->actingAs($officer)->get('/cameras/'.$camera->id.'/edit')->assertOk();
+        $this->actingAs($officer)->get('/cameras')->assertOk();
+        $this->actingAs($officer)->get('/cameras/'.$camera->id)->assertOk();
+        $this->actingAs($officer)->get('/cameras/'.$camera->id.'/edit')->assertForbidden();
         $this->actingAs($officer)->delete('/cameras/'.$camera->id)->assertForbidden();
     }
 
@@ -91,35 +93,36 @@ class RoleAccessTest extends TestCase
         $this->assertGuest();
     }
 
-    public function test_last_active_administrator_cannot_demote_himself(): void
+    public function test_the_edit_form_never_changes_roles(): void
     {
-        $admin = $this->admin(); // the only active administrator
+        $admin = $this->admin(); // the only active Super Admin
 
-        $response = $this->actingAs($admin)->put('/users/'.$admin->id, [
+        // The edit form has no role field; a forged role value is
+        // silently discarded and the account keeps its role.
+        $this->actingAs($admin)->put('/users/'.$admin->id, [
             'first_name' => $admin->first_name,
             'last_name' => $admin->last_name,
             'email' => $admin->email,
             'phone' => '0600000000',
-            'role' => UserRole::Employee->value,
+            'role' => UserRole::Viewer->value,
             'status' => UserStatus::Active->value,
-        ]);
+        ])->assertRedirect(route('users.index'));
 
-        $response->assertRedirect(route('users.edit', $admin));
-        $response->assertSessionHas('error');
-        $this->assertSame(UserRole::Administrator, $admin->fresh()->role);
+        $this->assertSame(UserRole::SuperAdmin, $admin->fresh()->role);
     }
 
-    public function test_last_active_administrator_cannot_be_deleted(): void
+    public function test_the_last_active_super_admin_cannot_be_deleted(): void
     {
         $admin = $this->admin();
-        $secondAdmin = User::factory()->suspended()->create(['role' => UserRole::Administrator]);
+        $suspendedAdmin = User::factory()->suspended()->create(['role' => UserRole::SuperAdmin]);
 
-        // $admin is the only ACTIVE administrator; another admin exists but is suspended.
-        $this->actingAs($admin)->delete('/users/'.$secondAdmin->id); // allowed: suspended admin is not the last active one
-        $this->assertDatabaseMissing('users', ['id' => $secondAdmin->id]);
+        // A suspended (not last-active) Super Admin may be deleted…
+        $this->actingAs($admin)->delete('/users/'.$suspendedAdmin->id);
+        $this->assertDatabaseMissing('users', ['id' => $suspendedAdmin->id]);
 
+        // …but the last active one (also self here) never can be.
         $response = $this->actingAs($admin)->delete('/users/'.$admin->id);
-        $response->assertSessionHas('error'); // self-delete refused
+        $response->assertSessionHas('error');
         $this->assertDatabaseHas('users', ['id' => $admin->id]);
     }
 }

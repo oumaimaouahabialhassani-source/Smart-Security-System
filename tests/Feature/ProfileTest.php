@@ -24,7 +24,7 @@ class ProfileTest extends TestCase
 
     public function test_user_can_update_their_personal_information(): void
     {
-        $user = User::factory()->create(['role' => UserRole::Employee]);
+        $user = User::factory()->create(['role' => UserRole::Viewer]);
 
         $this->actingAs($user)
             ->put('/profile', [

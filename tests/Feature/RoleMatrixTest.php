@@ -8,7 +8,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 /**
- * The full page-access matrix for the five roles. One assertion per
+ * The full page-access matrix for the two roles. One assertion per
  * cell so a regression names the exact role + URL that broke.
  */
 class RoleMatrixTest extends TestCase
@@ -17,21 +17,27 @@ class RoleMatrixTest extends TestCase
 
     private const MATRIX = [
         // url => [allowed roles]
-        '/dashboard' => ['administrator', 'security_officer', 'manager', 'receptionist', 'employee'],
-        '/visitors' => ['administrator', 'security_officer', 'manager', 'receptionist', 'employee'],
-        '/visitors/create' => ['administrator', 'security_officer', 'receptionist'],
-        '/cameras' => ['administrator', 'security_officer', 'manager', 'receptionist', 'employee'],
-        '/cameras/create' => ['administrator', 'security_officer'],
-        '/devices' => ['administrator', 'security_officer', 'manager', 'receptionist', 'employee'],
-        '/biometrics' => ['administrator', 'security_officer', 'manager', 'receptionist', 'employee'],
-        '/access' => ['administrator', 'security_officer', 'manager', 'receptionist', 'employee'],
-        '/access/permissions/create' => ['administrator', 'security_officer'],
-        '/alerts' => ['administrator', 'security_officer', 'manager', 'receptionist', 'employee'],
-        '/users' => ['administrator'],
-        '/users/create' => ['administrator'],
-        '/reports' => ['administrator', 'manager'],
-        '/settings' => ['administrator'],
-        '/audit' => ['administrator'],
+        '/dashboard' => ['super_admin', 'viewer'],
+        '/visitors' => ['super_admin', 'viewer'],
+        '/visitors/create' => ['super_admin'],
+        '/cameras' => ['super_admin', 'viewer'],
+        '/cameras/live' => ['super_admin', 'viewer'],
+        '/cameras/create' => ['super_admin'],
+        '/devices' => ['super_admin', 'viewer'],
+        '/biometrics' => ['super_admin', 'viewer'],
+        '/access' => ['super_admin', 'viewer'],
+        '/access/permissions/create' => ['super_admin'],
+        '/alerts' => ['super_admin', 'viewer'],
+        '/ai-bot' => ['super_admin', 'viewer'],
+        '/ai-bot/analytics' => ['super_admin', 'viewer'],
+        '/ai-bot/chat' => ['super_admin'],
+        '/users' => ['super_admin'],
+        '/users/create' => ['super_admin'],
+        '/notifications' => ['super_admin', 'viewer'],
+        '/help' => ['super_admin', 'viewer'],
+        '/reports' => ['super_admin', 'viewer'],
+        '/settings' => ['super_admin'],
+        '/audit' => ['super_admin'],
     ];
 
     public function test_every_role_sees_exactly_the_pages_it_is_allowed(): void

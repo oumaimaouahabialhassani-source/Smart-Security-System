@@ -13,18 +13,16 @@ class NotificationTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_raising_an_alert_notifies_active_security_staff_only(): void
+    public function test_raising_an_alert_notifies_active_monitoring_roles_only(): void
     {
-        $admin = User::factory()->create(['role' => UserRole::Administrator]);
-        $officer = User::factory()->create(['role' => UserRole::SecurityOfficer]);
-        $employee = User::factory()->create(['role' => UserRole::Employee]);
-        $suspended = User::factory()->suspended()->create(['role' => UserRole::Administrator]);
+        $admin = User::factory()->create(['role' => UserRole::SuperAdmin]);
+        $viewer = User::factory()->create(['role' => UserRole::Viewer]);
+        $suspended = User::factory()->suspended()->create(['role' => UserRole::SuperAdmin]);
 
         Alert::raise('Unauthorized Access', AlertSeverity::Critical, 'Forced entry at the main gate.');
 
         $this->assertSame(1, $admin->notifications()->count());
-        $this->assertSame(1, $officer->notifications()->count());
-        $this->assertSame(0, $employee->notifications()->count());
+        $this->assertSame(1, $viewer->notifications()->count());
         $this->assertSame(0, $suspended->notifications()->count());
 
         $data = $admin->notifications()->first()->data;
@@ -35,7 +33,7 @@ class NotificationTest extends TestCase
     public function test_critical_only_preference_filters_low_severities(): void
     {
         $picky = User::factory()->create([
-            'role' => UserRole::Administrator,
+            'role' => UserRole::SuperAdmin,
             'notification_preferences' => ['critical_only' => true],
         ]);
 
@@ -48,7 +46,7 @@ class NotificationTest extends TestCase
 
     public function test_feed_returns_unread_count_and_items(): void
     {
-        $admin = User::factory()->create(['role' => UserRole::Administrator]);
+        $admin = User::factory()->create(['role' => UserRole::SuperAdmin]);
         Alert::raise('Camera Offline', AlertSeverity::High, 'Camera CAM-3 stopped responding.');
 
         $this->actingAs($admin)
@@ -61,7 +59,7 @@ class NotificationTest extends TestCase
 
     public function test_mark_one_and_mark_all_as_read(): void
     {
-        $admin = User::factory()->create(['role' => UserRole::Administrator]);
+        $admin = User::factory()->create(['role' => UserRole::SuperAdmin]);
         Alert::raise('Camera Offline', AlertSeverity::High, 'CAM-1 down.');
         Alert::raise('IoT Device Offline', AlertSeverity::Medium, 'Sensor S-9 down.');
 
@@ -75,8 +73,8 @@ class NotificationTest extends TestCase
 
     public function test_users_cannot_read_other_peoples_notifications(): void
     {
-        $admin = User::factory()->create(['role' => UserRole::Administrator]);
-        $other = User::factory()->create(['role' => UserRole::SecurityOfficer]);
+        $admin = User::factory()->create(['role' => UserRole::SuperAdmin]);
+        $other = User::factory()->create(['role' => UserRole::Viewer]);
         Alert::raise('Camera Offline', AlertSeverity::High, 'CAM-1 down.');
 
         $notification = $admin->notifications()->first();

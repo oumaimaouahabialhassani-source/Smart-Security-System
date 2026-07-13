@@ -83,15 +83,13 @@
             </div>
         @endif
 
+        {{-- Roles are never chosen here: new accounts are always
+             Viewer, and promotion happens from the Users table
+             (Super Admin only). --}}
         <div class="form-field">
-            <label for="role">Role <span class="req" aria-hidden="true">*</span></label>
-            <select id="role" name="role" required @class(['is-invalid' => $errors->has('role')])>
-                <option value="" disabled @selected(old('role', $user?->role?->value) === null)>Select a role…</option>
-                @foreach ($roles as $role)
-                    <option value="{{ $role->value }}" @selected(old('role', $user?->role?->value) === $role->value)>{{ $role->label() }}</option>
-                @endforeach
-            </select>
-            @error('role') <p class="field-error" role="alert">{{ $message }}</p> @enderror
+            <label for="role-display">Role</label>
+            <input type="text" id="role-display" value="{{ $editing ? $user->role->label() : 'Viewer (default)' }}" disabled>
+            <p class="muted" style="font-size:12.5px; margin:6px 0 0">{{ $editing ? 'Change it with Promote/Demote on the Users page.' : 'Every new account starts as a read-only Viewer.' }}</p>
         </div>
 
         <div class="form-field">

@@ -33,6 +33,6 @@ class DevicePolicy
 
     public function delete(User $actor, Device $device): bool
     {
-        return $actor->role === UserRole::Administrator;
+        return $actor->role->isAdmin();
     }
 }

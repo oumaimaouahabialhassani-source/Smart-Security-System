@@ -49,7 +49,7 @@ database**, run `php artisan migrate` only, then create the first administrator:
 php artisan tinker
 >>> App\Models\User::create(['first_name' => 'Admin', 'last_name' => 'User',
 ...     'email' => 'admin@example.com', 'password' => 'ChangeMe!123',
-...     'role' => App\Enums\UserRole::Administrator,
+...     'role' => App\Enums\UserRole::SuperAdmin,
 ...     'status' => App\Enums\UserStatus::Active]);
 ```
 
@@ -69,13 +69,14 @@ php artisan schedule:work
 
 ## 5. Log in
 
-Seeded credentials: `admin@smartsecurity.test` / `password`
-(change it immediately from Users → Edit if the seeder is used outside a demo).
+Seeded credentials: `admin@smartsecurity.test` / `password` — this is the single
+**Super Admin** (the only unrestricted role). Change the password immediately if the
+seeder is used outside a demo.
 
 ## 6. Verify
 
 ```bash
-php artisan test         # 37 tests, in-memory SQLite
+php artisan test         # 61 tests / 348 assertions, incl. the full role-access matrix
 ```
 
 ## Troubleshooting

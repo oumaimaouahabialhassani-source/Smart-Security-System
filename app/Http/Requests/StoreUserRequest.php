@@ -2,7 +2,6 @@
 
 namespace App\Http\Requests;
 
-use App\Enums\UserRole;
 use App\Enums\UserStatus;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -39,7 +38,9 @@ class StoreUserRequest extends FormRequest
             'last_name' => ['required', 'string', 'max:100'],
             'email' => ['required', 'string', 'lowercase', 'email', 'max:255', 'unique:users,email'],
             'phone' => ['required', 'string', 'max:30'],
-            'role' => ['required', Rule::enum(UserRole::class)],
+            // No 'role' rule: new accounts are ALWAYS created as
+            // Viewer — the controller forces it and any submitted
+            // role value is discarded.
             'status' => ['required', Rule::enum(UserStatus::class)],
             'avatar' => ['nullable', 'image', 'max:2048'],
         ];

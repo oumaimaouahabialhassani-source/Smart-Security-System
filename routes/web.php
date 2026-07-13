@@ -6,6 +6,7 @@ use App\Http\Controllers\Auth\PasswordResetController;
 use App\Http\Controllers\AccessController;
 use App\Http\Controllers\AlertController;
 use App\Http\Controllers\AccessPermissionController;
+use App\Http\Controllers\AiSecurityBotController;
 use App\Http\Controllers\BiometricController;
 use App\Http\Controllers\CameraController;
 use App\Http\Controllers\DashboardController;
@@ -44,23 +45,33 @@ Route::middleware(['auth', 'active'])->group(function () {
     Route::put('/profile', [\App\Http\Controllers\ProfileController::class, 'update'])->name('profile.update');
     Route::put('/profile/password', [\App\Http\Controllers\ProfileController::class, 'updatePassword'])->name('profile.password');
 
+    Route::get('/notifications', [\App\Http\Controllers\NotificationController::class, 'index'])->name('notifications.index');
     Route::get('/notifications/feed', [\App\Http\Controllers\NotificationController::class, 'feed'])->name('notifications.feed');
     Route::post('/notifications/read-all', [\App\Http\Controllers\NotificationController::class, 'markAllRead'])->name('notifications.read-all');
     Route::post('/notifications/{id}/read', [\App\Http\Controllers\NotificationController::class, 'markRead'])->name('notifications.read');
 
-    Route::resource('users', UserController::class);
+    // Route::view (not a closure) so `php artisan route:cache` works.
+    Route::view('/help', 'help.index')->name('help.index');
 
+    Route::patch('/users/{user}/role', [UserController::class, 'role'])->name('users.role');
+    Route::resource('users', UserController::class)->middleware('module:users');
+
+    Route::get('/cameras/live', [CameraController::class, 'live'])->name('cameras.live');
+    Route::get('/cameras/live/feed', [CameraController::class, 'liveFeed'])->name('cameras.live-feed');
     Route::resource('cameras', CameraController::class);
 
-    Route::resource('devices', DeviceController::class);
+    Route::resource('devices', DeviceController::class)->middleware('module:devices');
 
-    Route::get('/visitors/export', [VisitorController::class, 'export'])->name('visitors.export');
-    Route::post('/visitors/{visitor}/check-in', [VisitorController::class, 'checkIn'])->name('visitors.check-in');
-    Route::post('/visitors/{visitor}/check-out', [VisitorController::class, 'checkOut'])->name('visitors.check-out');
-    Route::get('/visitors/{visitor}/badge', [VisitorController::class, 'badge'])->name('visitors.badge');
-    Route::get('/visitors/{visitor}/pass', [VisitorController::class, 'pass'])->name('visitors.pass');
-    Route::resource('visitors', VisitorController::class);
+    Route::middleware('module:visitors')->group(function () {
+        Route::get('/visitors/export', [VisitorController::class, 'export'])->name('visitors.export');
+        Route::post('/visitors/{visitor}/check-in', [VisitorController::class, 'checkIn'])->name('visitors.check-in');
+        Route::post('/visitors/{visitor}/check-out', [VisitorController::class, 'checkOut'])->name('visitors.check-out');
+        Route::get('/visitors/{visitor}/badge', [VisitorController::class, 'badge'])->name('visitors.badge');
+        Route::get('/visitors/{visitor}/pass', [VisitorController::class, 'pass'])->name('visitors.pass');
+        Route::resource('visitors', VisitorController::class);
+    });
 
+    Route::middleware('module:biometrics')->group(function () {
     Route::get('/biometrics/logs', [BiometricController::class, 'logs'])->name('biometrics.logs');
     Route::get('/biometrics/logs/export', [BiometricController::class, 'exportLogs'])->name('biometrics.logs.export');
     Route::get('/biometrics/export', [BiometricController::class, 'exportProfiles'])->name('biometrics.export');
@@ -71,7 +82,9 @@ Route::middleware(['auth', 'active'])->group(function () {
     Route::post('/biometrics/devices/{device}/restart', [BiometricController::class, 'restartDevice'])->name('biometrics.device-restart');
     Route::post('/biometrics/devices/{device}/sync', [BiometricController::class, 'syncDevice'])->name('biometrics.device-sync');
     Route::resource('biometrics', BiometricController::class)->parameters(['biometrics' => 'biometric']);
+    });
 
+    Route::middleware('module:access')->group(function () {
     Route::get('/access', [AccessController::class, 'index'])->name('access.index');
     Route::get('/access/logs', [AccessController::class, 'logs'])->name('access.logs');
     Route::get('/access/logs/export', [AccessController::class, 'exportLogs'])->name('access.logs.export');
@@ -86,6 +99,7 @@ Route::middleware(['auth', 'active'])->group(function () {
     Route::put('/access/permissions/{permission}', [AccessPermissionController::class, 'update'])->name('access.permissions.update');
     Route::delete('/access/permissions/{permission}', [AccessPermissionController::class, 'destroy'])->name('access.permissions.destroy');
     Route::post('/access/temporary', [AccessPermissionController::class, 'storeTemporary'])->name('access.temporary');
+    });
 
     Route::get('/alerts', [AlertController::class, 'index'])->name('alerts.index');
     Route::get('/alerts/feed', [AlertController::class, 'feed'])->name('alerts.feed');
@@ -96,6 +110,24 @@ Route::middleware(['auth', 'active'])->group(function () {
     Route::post('/alerts/{alert}/resolve', [AlertController::class, 'resolve'])->name('alerts.resolve');
     Route::delete('/alerts/{alert}', [AlertController::class, 'destroy'])->name('alerts.destroy');
 
+    // AI Security Bot — administrators and security officers only.
+    Route::middleware('ai.bot')->prefix('ai-bot')->name('ai.')->group(function () {
+        Route::get('/', [AiSecurityBotController::class, 'dashboard'])->name('dashboard');
+        Route::get('/feed', [AiSecurityBotController::class, 'feed'])->name('feed');
+        Route::post('/scan', [AiSecurityBotController::class, 'scan'])->name('scan');
+        Route::get('/analytics', [\App\Http\Controllers\AiAnalyticsController::class, 'index'])->name('analytics');
+        Route::get('/alerts', [AiSecurityBotController::class, 'alerts'])->name('alerts');
+        Route::patch('/alerts/{aiAlert}', [AiSecurityBotController::class, 'update'])->name('alerts.update');
+        Route::post('/alerts/{aiAlert}/resolve', [AiSecurityBotController::class, 'resolve'])->name('alerts.resolve');
+        Route::delete('/alerts/{aiAlert}', [AiSecurityBotController::class, 'destroy'])->name('alerts.destroy');
+        Route::get('/history', [AiSecurityBotController::class, 'history'])->name('history');
+        Route::get('/history/export', [AiSecurityBotController::class, 'export'])->name('export');
+        Route::get('/report', [AiSecurityBotController::class, 'report'])->name('report');
+        Route::get('/chat', [AiSecurityBotController::class, 'chat'])->name('chat');
+        Route::post('/chat', [AiSecurityBotController::class, 'chatMessage'])->name('chat.message');
+    });
+
+    Route::middleware('module:settings')->group(function () {
     Route::get('/settings', [SettingController::class, 'index'])->name('settings.index');
     Route::put('/settings/{group}', [SettingController::class, 'update'])->name('settings.update');
     Route::post('/settings/test-email', [SettingController::class, 'testEmail'])->name('settings.test-email');
@@ -103,12 +135,13 @@ Route::middleware(['auth', 'active'])->group(function () {
     Route::get('/settings/backups/{file}/download', [SettingController::class, 'backupDownload'])->name('settings.backup-download');
     Route::post('/settings/backups/{file}/restore', [SettingController::class, 'backupRestore'])->name('settings.backup-restore');
     Route::delete('/settings/backups/{file}', [SettingController::class, 'backupDelete'])->name('settings.backup-delete');
+    });
 
-    Route::get('/audit', [\App\Http\Controllers\AuditLogController::class, 'index'])->name('audit.index');
-    Route::get('/audit/export', [\App\Http\Controllers\AuditLogController::class, 'export'])->name('audit.export');
+    Route::get('/audit', [\App\Http\Controllers\AuditLogController::class, 'index'])->middleware('module:audit')->name('audit.index');
+    Route::get('/audit/export', [\App\Http\Controllers\AuditLogController::class, 'export'])->middleware('module:audit')->name('audit.export');
 
-    Route::get('/reports', [\App\Http\Controllers\ReportController::class, 'index'])->name('reports.index');
-    Route::get('/reports/export', [\App\Http\Controllers\ReportController::class, 'export'])->name('reports.export');
+    Route::get('/reports', [\App\Http\Controllers\ReportController::class, 'index'])->middleware('module:reports')->name('reports.index');
+    Route::get('/reports/export', [\App\Http\Controllers\ReportController::class, 'export'])->middleware('module:reports')->name('reports.export');
 
     Route::post('/logout', [LoginController::class, 'logout'])->name('logout');
 });

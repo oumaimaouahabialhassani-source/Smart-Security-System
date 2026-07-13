@@ -109,7 +109,7 @@ class Alert extends Model
         // failure must never break the action that raised the alert.
         rescue(fn () => Notification::send(
             User::where('status', UserStatus::Active)
-                ->whereIn('role', [UserRole::Administrator, UserRole::SecurityOfficer])
+                ->whereIn('role', UserRole::monitoringRoles())
                 ->get()
                 ->filter(fn (User $user) => $user->wantsAlertNotification($severity)),
             new SecurityAlert($alert)

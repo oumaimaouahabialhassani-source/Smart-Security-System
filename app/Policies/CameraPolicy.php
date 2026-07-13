@@ -33,6 +33,6 @@ class CameraPolicy
 
     public function delete(User $actor, Camera $camera): bool
     {
-        return $actor->role === UserRole::Administrator;
+        return $actor->role->isAdmin();
     }
 }

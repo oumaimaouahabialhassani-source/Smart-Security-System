@@ -24,6 +24,7 @@ class UserController extends Controller
         $this->authorize('viewAny', User::class);
 
         $users = User::query()
+            ->with(['creator', 'updater'])
             ->search($request->query('search'))
             ->when($request->query('role'), fn ($q, $role) => $q->where('role', $role))
             ->when($request->query('status'), fn ($q, $status) => $q->where('status', $status))
@@ -46,7 +47,6 @@ class UserController extends Controller
         $this->authorize('create', User::class);
 
         return view('users.create', [
-            'roles' => UserRole::cases(),
             'statuses' => UserStatus::cases(),
         ]);
     }
@@ -62,6 +62,13 @@ class UserController extends Controller
         if ($request->hasFile('avatar')) {
             $data['avatar'] = $request->file('avatar')->store('avatars', 'public');
         }
+
+        $data['created_by'] = $request->user()->id;
+
+        // Every new account starts as a read-only Viewer, no matter
+        // what the frontend submitted. Promotion is a separate,
+        // Super Admin-only action.
+        $data['role'] = UserRole::Viewer;
 
         $user = User::create($data);
 
@@ -90,7 +97,6 @@ class UserController extends Controller
 
         return view('users.edit', [
             'user' => $user,
-            'roles' => UserRole::cases(),
             'statuses' => UserStatus::cases(),
         ]);
     }
@@ -102,12 +108,15 @@ class UserController extends Controller
     {
         $data = $request->validated();
 
-        // Never demote, suspend or deactivate the last administrator
-        // still able to sign in — the system would become unmanageable.
+        // Roles never change through this form (see role() below).
+        unset($data['role']);
+
+        // Never suspend or deactivate the last Super Admin still able
+        // to sign in — the system would become unmanageable.
         if (\App\Policies\UserPolicy::isLastActiveAdministrator($user)
-            && ($data['role'] !== \App\Enums\UserRole::Administrator->value || $data['status'] !== \App\Enums\UserStatus::Active->value)) {
+            && $data['status'] !== \App\Enums\UserStatus::Active->value) {
             return redirect()->route('users.edit', $user)
-                ->with('error', "{$user->name} is the last active administrator — their role and status cannot be changed.");
+                ->with('error', "{$user->name} is the last active Super Admin — their status cannot be changed.");
         }
 
         if (empty($data['password'])) {
@@ -120,6 +129,8 @@ class UserController extends Controller
             }
             $data['avatar'] = $request->file('avatar')->store('avatars', 'public');
         }
+
+        $data['updated_by'] = $request->user()->id;
 
         $user->update($data);
 
@@ -139,9 +150,10 @@ class UserController extends Controller
                 ->with('error', 'You cannot delete your own account while signed in.');
         }
 
+        // The last Super Admin able to sign in can never be deleted.
         if (\App\Policies\UserPolicy::isLastActiveAdministrator($user)) {
             return redirect()->route('users.index')
-                ->with('error', "{$user->name} is the last active administrator and cannot be deleted.");
+                ->with('error', "{$user->name} is the last active Super Admin and cannot be deleted.");
         }
 
         if ($user->avatar) {
@@ -153,5 +165,40 @@ class UserController extends Controller
 
         return redirect()->route('users.index')
             ->with('status', "User {$name} has been deleted.");
+    }
+
+    /**
+     * Promote to Super Admin / demote to Viewer, from the Users
+     * table. Super Admin only.
+     */
+    public function role(Request $request, User $user): RedirectResponse
+    {
+        $this->authorize('changeRole', $user);
+
+        // Non-bypassable guard: even the Super Admin (who passes
+        // Gate::before) can never change their own role.
+        if ($user->is($request->user())) {
+            return back()->with('error', 'You cannot change your own role.');
+        }
+
+        $data = $request->validate([
+            'role' => ['required', \Illuminate\Validation\Rule::in(array_column($request->user()->role->assignableRoles(), 'value'))],
+        ], [
+            'role.in' => 'You are not allowed to assign this role.',
+        ]);
+
+        $newRole = UserRole::from($data['role']);
+
+        // Demoting the last Super Admin would lock everyone out.
+        if (\App\Policies\UserPolicy::isLastActiveAdministrator($user) && ! $newRole->isAdmin()) {
+            return back()->with('error', "{$user->name} is the last active Super Admin — they cannot be demoted.");
+        }
+
+        $previousRole = $user->role;
+        $user->forceFill(['role' => $newRole, 'updated_by' => $request->user()->id])->save();
+
+        \App\Models\AuditLog::record('Users', 'Role Changed', "{$user->name}: {$previousRole->label()} → {$newRole->label()}");
+
+        return back()->with('status', "{$user->name} is now {$newRole->label()}.");
     }
 }

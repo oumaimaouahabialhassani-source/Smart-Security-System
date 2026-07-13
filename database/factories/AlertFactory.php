@@ -53,7 +53,7 @@ class AlertFactory extends Factory
             'floor' => fake()->randomElement(['Ground Floor', 'Floor 1', 'Floor 2']),
             'ai_confidence' => fake()->boolean(45) ? fake()->numberBetween(62, 99) : null,
             'assigned_to' => $status === AlertStatus::New ? null
-                : User::whereIn('role', [UserRole::Administrator, UserRole::SecurityOfficer])->inRandomOrder()->value('id'),
+                : User::where('role', UserRole::SuperAdmin)->inRandomOrder()->value('id'),
             'notes' => $resolved ? fake()->sentence() : null,
             'resolved_at' => $resolved ? $happenedAt->copy()->addMinutes(fake()->numberBetween(10, 600)) : null,
             'happened_at' => $happenedAt,

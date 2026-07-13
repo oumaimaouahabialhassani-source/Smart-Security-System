@@ -32,7 +32,9 @@ class UserFactory extends Factory
             'phone' => fake()->numerify('+212 6## ### ###'),
             'email_verified_at' => now(),
             'password' => static::$password ??= Hash::make('password'),
-            'role' => fake()->randomElement(UserRole::cases()),
+            // Deterministic default: Viewer. Create Super Admins
+            // explicitly where a test or seeder needs one.
+            'role' => UserRole::Viewer,
             // Deterministic default so tests are stable; use the
             // inactive()/suspended() states for other statuses.
             'status' => UserStatus::Active,

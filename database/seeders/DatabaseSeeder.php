@@ -29,6 +29,8 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
+        // Exactly two accounts: the single unrestricted Super Admin
+        // and the single read-only Viewer.
         User::firstOrCreate(
             ['email' => 'admin@smartsecurity.test'],
             [
@@ -36,17 +38,22 @@ class DatabaseSeeder extends Seeder
                 'last_name' => 'Administrator',
                 'phone' => '+212 600 000 000',
                 'password' => 'password', // hashed by the model's "hashed" cast
-                'role' => UserRole::Administrator,
+                'role' => UserRole::SuperAdmin,
                 'status' => UserStatus::Active,
             ],
         );
 
-        // Demo users so the Users Management table has data to browse.
-        if (User::count() < 15) {
-            User::factory()->count(11)->create();
-            User::factory()->count(2)->inactive()->create();
-            User::factory()->count(2)->suspended()->create();
-        }
+        User::firstOrCreate(
+            ['email' => 'viewer@smartsecurity.test'],
+            [
+                'first_name' => 'Vera',
+                'last_name' => 'Viewer',
+                'phone' => '+212 611 111 111',
+                'password' => 'password', // hashed by the model's "hashed" cast
+                'role' => UserRole::Viewer,
+                'status' => UserStatus::Active,
+            ],
+        );
 
         // Demo cameras so the Cameras Management module has data to browse.
         if (Camera::count() < 18) {
@@ -184,6 +191,14 @@ class DatabaseSeeder extends Seeder
             \App\Models\Alert::factory()->count(60)->create();
             \App\Models\Alert::factory()->count(10)->today()->create();
             \App\Models\Alert::factory()->count(2)->today()->criticalNew()->create();
+        }
+
+        // Two weeks of AI Security Bot findings, plus fresh ones for
+        // today so the AI dashboard has live-looking data.
+        if (\App\Models\AiAlert::count() === 0) {
+            \App\Models\AiAlert::factory()->count(50)->create();
+            \App\Models\AiAlert::factory()->count(12)->today()->create();
+            \App\Models\AiAlert::factory()->count(2)->today()->criticalNew()->create();
         }
     }
 }

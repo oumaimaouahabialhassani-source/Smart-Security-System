@@ -12,24 +12,18 @@ class ReportsTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_reports_require_administrator_or_manager(): void
+    public function test_reports_are_viewable_by_both_roles(): void
     {
-        $employee = User::factory()->create(['role' => UserRole::Employee]);
-        $this->actingAs($employee)->get('/reports')->assertForbidden();
+        $viewer = User::factory()->create(['role' => UserRole::Viewer]);
+        $this->actingAs($viewer)->get('/reports')->assertOk();
 
-        $officer = User::factory()->create(['role' => UserRole::SecurityOfficer]);
-        $this->actingAs($officer)->get('/reports')->assertForbidden();
-
-        $manager = User::factory()->create(['role' => UserRole::Manager]);
-        $this->actingAs($manager)->get('/reports')->assertOk();
-
-        $admin = User::factory()->create(['role' => UserRole::Administrator]);
+        $admin = User::factory()->create(['role' => UserRole::SuperAdmin]);
         $this->actingAs($admin)->get('/reports')->assertOk()->assertSee('Reports');
     }
 
     public function test_reports_page_renders_every_section(): void
     {
-        $admin = User::factory()->create(['role' => UserRole::Administrator]);
+        $admin = User::factory()->create(['role' => UserRole::SuperAdmin]);
         Visit::factory()->count(3)->create();
 
         $this->actingAs($admin)
@@ -43,7 +37,7 @@ class ReportsTest extends TestCase
 
     public function test_date_range_filter_is_applied(): void
     {
-        $admin = User::factory()->create(['role' => UserRole::Administrator]);
+        $admin = User::factory()->create(['role' => UserRole::SuperAdmin]);
         Visit::factory()->create(['visit_date' => today()->subDays(60)]);
 
         $this->actingAs($admin)
@@ -58,7 +52,7 @@ class ReportsTest extends TestCase
 
     public function test_section_export_returns_csv(): void
     {
-        $admin = User::factory()->create(['role' => UserRole::Administrator]);
+        $admin = User::factory()->create(['role' => UserRole::SuperAdmin]);
 
         $this->actingAs($admin)
             ->get('/reports/export?section=visitors')

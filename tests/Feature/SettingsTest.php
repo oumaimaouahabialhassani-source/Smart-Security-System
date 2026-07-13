@@ -14,17 +14,17 @@ class SettingsTest extends TestCase
 
     private function admin(): User
     {
-        return User::factory()->create(['role' => UserRole::Administrator]);
+        return User::factory()->create(['role' => UserRole::SuperAdmin]);
     }
 
     public function test_settings_require_administrator(): void
     {
-        $employee = User::factory()->create(['role' => UserRole::Employee]);
+        $employee = User::factory()->create(['role' => UserRole::Viewer]);
 
         $this->actingAs($employee)->get('/settings')->assertForbidden();
         $this->actingAs($employee)->put('/settings/general', [])->assertForbidden();
 
-        $officer = User::factory()->create(['role' => UserRole::SecurityOfficer]);
+        $officer = User::factory()->create(['role' => UserRole::Viewer]);
         $this->actingAs($officer)->get('/settings')->assertForbidden();
     }
 

@@ -58,7 +58,7 @@ class AlertController extends Controller
             'timeline' => AccessEvent::security()->with('door')->orderByDesc('happened_at')->limit(6)->get(),
             'health' => $this->systemHealth(),
             'map' => $this->mapData(),
-            'officers' => User::whereIn('role', [UserRole::Administrator, UserRole::SecurityOfficer])->orderBy('first_name')->get(),
+            'officers' => User::where('role', UserRole::SuperAdmin)->orderBy('first_name')->get(),
             'types' => Alert::TYPES,
             'severities' => AlertSeverity::cases(),
             'statuses' => AlertStatus::cases(),
@@ -158,7 +158,7 @@ class AlertController extends Controller
      */
     public function destroy(Alert $alert): RedirectResponse
     {
-        abort_unless(auth()->user()->role === UserRole::Administrator, 403);
+        abort_unless(auth()->user()->role->isAdmin(), 403);
 
         $code = $alert->alert_code;
         $alert->delete();

@@ -4,21 +4,34 @@ namespace App\Enums;
 
 enum UserRole: string
 {
-    case Administrator = 'administrator';
-    case SecurityOfficer = 'security_officer';
-    case Manager = 'manager';
-    case Receptionist = 'receptionist';
-    case Employee = 'employee';
+    case SuperAdmin = 'super_admin';
+    case Viewer = 'viewer';
 
     public function label(): string
     {
         return match ($this) {
-            self::Administrator => 'Administrator',
-            self::SecurityOfficer => 'Security Officer',
-            self::Manager => 'Manager',
-            self::Receptionist => 'Receptionist',
-            self::Employee => 'Employee',
+            self::SuperAdmin => 'Super Admin',
+            self::Viewer => 'Viewer',
         };
+    }
+
+    /**
+     * The one unrestricted role. Also honored globally through
+     * Gate::before in AppServiceProvider.
+     */
+    public function isSuperAdmin(): bool
+    {
+        return $this === self::SuperAdmin;
+    }
+
+    /**
+     * Admin-level check kept as the single seam every capability
+     * routes through — reintroducing management roles later means
+     * touching this file only.
+     */
+    public function isAdmin(): bool
+    {
+        return $this === self::SuperAdmin;
     }
 
     /**
@@ -26,7 +39,27 @@ enum UserRole: string
      */
     public function canManageUsers(): bool
     {
-        return $this === self::Administrator;
+        return $this->isAdmin();
+    }
+
+    /**
+     * Can change another user's role. Super Admin only.
+     */
+    public function canAssignRoles(): bool
+    {
+        return $this === self::SuperAdmin;
+    }
+
+    /**
+     * The roles the Super Admin may set through the promote/demote
+     * action. Account creation never uses this — new accounts are
+     * always Viewer.
+     *
+     * @return list<self>
+     */
+    public function assignableRoles(): array
+    {
+        return $this === self::SuperAdmin ? [self::SuperAdmin, self::Viewer] : [];
     }
 
     /**
@@ -34,7 +67,7 @@ enum UserRole: string
      */
     public function canManageHardware(): bool
     {
-        return in_array($this, [self::Administrator, self::SecurityOfficer], true);
+        return $this->isAdmin();
     }
 
     /**
@@ -42,7 +75,7 @@ enum UserRole: string
      */
     public function canManageVisitors(): bool
     {
-        return in_array($this, [self::Administrator, self::SecurityOfficer, self::Receptionist], true);
+        return $this->isAdmin();
     }
 
     /**
@@ -50,7 +83,7 @@ enum UserRole: string
      */
     public function canProcessVisits(): bool
     {
-        return in_array($this, [self::Administrator, self::SecurityOfficer], true);
+        return $this->isAdmin();
     }
 
     /**
@@ -58,16 +91,15 @@ enum UserRole: string
      */
     public function canDeleteVisits(): bool
     {
-        return $this === self::Administrator;
+        return $this->isAdmin();
     }
 
     /**
-     * Can enroll biometrics (faces, fingerprints) and run identity
-     * verifications.
+     * Can enroll biometrics and run identity verifications.
      */
     public function canManageBiometrics(): bool
     {
-        return in_array($this, [self::Administrator, self::SecurityOfficer], true);
+        return $this->isAdmin();
     }
 
     /**
@@ -76,7 +108,7 @@ enum UserRole: string
      */
     public function canAdministerBiometrics(): bool
     {
-        return $this === self::Administrator;
+        return $this->isAdmin();
     }
 
     /**
@@ -84,7 +116,7 @@ enum UserRole: string
      */
     public function canManageAccess(): bool
     {
-        return in_array($this, [self::Administrator, self::SecurityOfficer], true);
+        return $this->isAdmin();
     }
 
     /**
@@ -92,7 +124,7 @@ enum UserRole: string
      */
     public function canGrantTemporaryAccess(): bool
     {
-        return in_array($this, [self::Administrator, self::SecurityOfficer, self::Receptionist], true);
+        return $this->isAdmin();
     }
 
     /**
@@ -100,15 +132,16 @@ enum UserRole: string
      */
     public function canAdministerAccess(): bool
     {
-        return $this === self::Administrator;
+        return $this->isAdmin();
     }
 
     /**
-     * Can acknowledge, assign, annotate and resolve alerts.
+     * Can acknowledge, assign, annotate and resolve alerts (regular
+     * and AI). Viewers monitor read-only.
      */
     public function canManageAlerts(): bool
     {
-        return in_array($this, [self::Administrator, self::SecurityOfficer], true);
+        return $this->isAdmin();
     }
 
     /**
@@ -116,7 +149,7 @@ enum UserRole: string
      */
     public function canManageSettings(): bool
     {
-        return $this === self::Administrator;
+        return $this->isAdmin();
     }
 
     /**
@@ -124,14 +157,74 @@ enum UserRole: string
      */
     public function canViewAuditLogs(): bool
     {
-        return $this === self::Administrator;
+        return $this->isAdmin();
     }
 
     /**
-     * Can open the Reports & Analytics module.
+     * Can open the Reports & Analytics module (read-only for Viewer).
      */
     public function canViewReports(): bool
     {
-        return in_array($this, [self::Administrator, self::Manager], true);
+        return true;
+    }
+
+    /**
+     * Can open the AI Security Bot module (dashboard, alerts,
+     * history, analytics). Mutations require canManageAlerts().
+     */
+    public function canUseAiBot(): bool
+    {
+        return true;
+    }
+
+    /**
+     * Can talk to the AI Chat Assistant.
+     */
+    public function canUseAiAssistant(): bool
+    {
+        return $this->isAdmin();
+    }
+
+    /**
+     * Can open the Visitors module (read).
+     */
+    public function canViewVisitors(): bool
+    {
+        return true;
+    }
+
+    /**
+     * Can open the Access Control module (read).
+     */
+    public function canViewAccess(): bool
+    {
+        return true;
+    }
+
+    /**
+     * Can open the IoT Devices module (read).
+     */
+    public function canViewDevices(): bool
+    {
+        return true;
+    }
+
+    /**
+     * Can open the Biometrics module (read).
+     */
+    public function canViewBiometrics(): bool
+    {
+        return true;
+    }
+
+    /**
+     * Fanned in on monitoring notifications (camera offline, unknown
+     * face, forced door, motion, emergencies).
+     *
+     * @return list<self>
+     */
+    public static function monitoringRoles(): array
+    {
+        return [self::SuperAdmin, self::Viewer];
     }
 }

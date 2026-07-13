@@ -31,6 +31,8 @@ class User extends Authenticatable
         'role',
         'status',
         'last_login',
+        'created_by',
+        'updated_by',
     ];
 
     /**
@@ -92,6 +94,22 @@ class User extends Authenticatable
     public function biometricProfile(): \Illuminate\Database\Eloquent\Relations\HasOne
     {
         return $this->hasOne(BiometricProfile::class);
+    }
+
+    /**
+     * The account that created this user.
+     */
+    public function creator(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    {
+        return $this->belongsTo(self::class, 'created_by');
+    }
+
+    /**
+     * The account that last edited this user.
+     */
+    public function updater(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    {
+        return $this->belongsTo(self::class, 'updated_by');
     }
 
     /**

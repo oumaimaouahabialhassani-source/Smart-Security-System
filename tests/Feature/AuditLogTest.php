@@ -15,15 +15,15 @@ class AuditLogTest extends TestCase
 
     private function admin(): User
     {
-        return User::factory()->create(['role' => UserRole::Administrator]);
+        return User::factory()->create(['role' => UserRole::SuperAdmin]);
     }
 
     public function test_audit_page_requires_administrator(): void
     {
-        $employee = User::factory()->create(['role' => UserRole::Employee]);
+        $employee = User::factory()->create(['role' => UserRole::Viewer]);
         $this->actingAs($employee)->get('/audit')->assertForbidden();
 
-        $officer = User::factory()->create(['role' => UserRole::SecurityOfficer]);
+        $officer = User::factory()->create(['role' => UserRole::Viewer]);
         $this->actingAs($officer)->get('/audit')->assertForbidden();
 
         $this->actingAs($this->admin())->get('/audit')->assertOk()->assertSee('Audit Logs');
@@ -62,8 +62,8 @@ class AuditLogTest extends TestCase
     {
         $this->actingAs($this->admin());
 
-        $target = User::factory()->create(['role' => UserRole::Employee]);
-        $target->update(['role' => UserRole::Manager]);
+        $target = User::factory()->create(['role' => UserRole::Viewer]);
+        $target->update(['role' => UserRole::SuperAdmin]);
         $this->assertDatabaseHas('audit_logs', ['action' => 'Role Changed']);
 
         $target->update(['status' => \App\Enums\UserStatus::Suspended]);

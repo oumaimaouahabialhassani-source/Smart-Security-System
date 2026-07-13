@@ -23,6 +23,12 @@ class AppServiceProvider extends ServiceProvider
     {
         $this->applyStoredSettings();
         $this->registerAuditing();
+
+        // The Super Admin bypasses every policy check — the single
+        // unrestricted role. Returning null lets normal policies run
+        // for everyone else. Self-delete and last-admin guards are
+        // enforced separately in UserController, so they still hold.
+        \Illuminate\Support\Facades\Gate::before(fn (\App\Models\User $user) => $user->role === \App\Enums\UserRole::SuperAdmin ? true : null);
     }
 
     /**

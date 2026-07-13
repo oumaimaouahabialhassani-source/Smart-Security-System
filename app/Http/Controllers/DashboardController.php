@@ -20,17 +20,29 @@ class DashboardController extends Controller
      */
     public function index(): View
     {
-        $weeklyAccess = $this->weeklyAccessEvents();
-        $alerts = $this->activeAlerts();
+        // The aggregates only change when hardware state or history
+        // changes — a 30-second cache absorbs rapid page switching
+        // without ever showing stale-feeling data.
+        [$weeklyAccess, $alerts, $cameras, $stats] = \Illuminate\Support\Facades\Cache::remember(
+            'dashboard.aggregates',
+            30,
+            function () {
+                $weeklyAccess = $this->weeklyAccessEvents();
+                $alerts = $this->activeAlerts();
+                $cameras = $this->cameraStatus();
+
+                return [$weeklyAccess, $alerts, $cameras, $this->stats($alerts->count(), $cameras)];
+            }
+        );
 
         return view('dashboard', [
-            'stats' => $this->stats($alerts->count()),
+            'stats' => $stats,
             'alerts' => $alerts->take(8),
             'alertTotal' => $alerts->count(),
             'accessEvents' => AccessEvent::access()->with('door')->orderByDesc('happened_at')->limit(6)->get(),
             'weeklyAccess' => $weeklyAccess,
             'maxWeekly' => max(max(array_column($weeklyAccess, 'count')), 1),
-            'cameras' => $this->cameraStatus(),
+            'cameras' => $cameras,
         ]);
     }
 
@@ -39,10 +51,8 @@ class DashboardController extends Controller
      *
      * @return array<int, array{label: string, value: string|int, meta: string}>
      */
-    private function stats(int $alertCount): array
+    private function stats(int $alertCount, array $cameras): array
     {
-        $cameras = $this->cameraStatus();
-
         $totalUsers = User::count();
         $activeUsers = User::where('status', UserStatus::Active)->count();
 

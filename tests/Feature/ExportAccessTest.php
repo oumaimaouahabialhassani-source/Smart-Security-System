@@ -17,7 +17,7 @@ class ExportAccessTest extends TestCase
      */
     public function test_employee_cannot_download_pii_exports(): void
     {
-        $employee = User::factory()->create(['role' => UserRole::Employee]);
+        $employee = User::factory()->create(['role' => UserRole::Viewer]);
 
         foreach ([
             '/visitors/export',
@@ -31,9 +31,9 @@ class ExportAccessTest extends TestCase
         }
     }
 
-    public function test_security_officer_can_download_operational_exports(): void
+    public function test_security_operator_is_read_only_and_cannot_download_pii_exports(): void
     {
-        $officer = User::factory()->create(['role' => UserRole::SecurityOfficer]);
+        $officer = User::factory()->create(['role' => UserRole::Viewer]);
 
         foreach ([
             '/visitors/export',
@@ -41,15 +41,29 @@ class ExportAccessTest extends TestCase
             '/access/logs/export',
             '/alerts/export',
         ] as $url) {
-            $this->actingAs($officer)->get($url)->assertOk();
+            $this->actingAs($officer)->get($url)->assertForbidden();
         }
     }
 
-    public function test_receptionist_can_export_visitors_but_not_access_logs(): void
+    public function test_admin_can_download_operational_exports(): void
     {
-        $receptionist = User::factory()->create(['role' => UserRole::Receptionist]);
+        $admin = User::factory()->create(['role' => UserRole::SuperAdmin]);
 
-        $this->actingAs($receptionist)->get('/visitors/export')->assertOk();
-        $this->actingAs($receptionist)->get('/access/logs/export')->assertForbidden();
+        foreach ([
+            '/visitors/export',
+            '/biometrics/export',
+            '/access/logs/export',
+            '/alerts/export',
+        ] as $url) {
+            $this->actingAs($admin)->get($url)->assertOk();
+        }
+    }
+
+    public function test_viewer_cannot_download_any_export(): void
+    {
+        $viewer = User::factory()->create(['role' => UserRole::Viewer]);
+
+        $this->actingAs($viewer)->get('/visitors/export')->assertForbidden();
+        $this->actingAs($viewer)->get('/access/logs/export')->assertForbidden();
     }
 }
