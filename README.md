@@ -2,7 +2,7 @@
 # Smart Security System
 
 A Laravel 11 back-office for a physical security company: visitor management, biometric
-enrollment & verification, door access control, real-time alerts, audit trail and
+enrollment & verification, door access control, real-time alerts and
 cross-module analytics — all behind role-based access control.
 
 ## Modules
@@ -19,7 +19,6 @@ cross-module analytics — all behind role-based access control.
 | Alerts | SOC page: lifecycle, assignment, facility map, insights, notification prefs | All view · manage: Admin, Security Officer |
 | Reports & Analytics | Cross-module KPIs, charts, heatmap, CSV exports | Administrator, Manager |
 | Settings | 10 groups incl. security policy, SMTP, appearance, backups | Administrator |
-| Audit Logs | Automatic activity trail (observers + auth events) | Administrator |
 
 ## Roles
 
@@ -66,7 +65,7 @@ profiles, 8 doors, ~320 access events and 73 alerts so every screen has data.
 php artisan test
 ```
 
-37 feature tests (auth, registration lockout, RBAC, settings, audit, reports) run
+feature tests (auth, RBAC, settings, reports, hardware) run
 against in-memory SQLite (see `phpunit.xml`) — they never touch MySQL.
 
 ## Architecture notes
@@ -75,9 +74,9 @@ against in-memory SQLite (see `phpunit.xml`) — they never touch MySQL.
   (`canManageVisitors()`, `canViewReports()`, …), enforced through Policies,
   FormRequest `authorize()` and controller guards. The `active` middleware logs out
   suspended/inactive users on their next request.
-- **Audit logging** — a generic `App\Observers\Auditable` observer watches 11 models,
-  plus listeners on Laravel's Login/Logout/Failed/PasswordReset events. No logging
-  code in controllers.
+- **Hardware event log** — `App\Models\HardwareEvent` records real device
+  interactions (status transitions, commands, pushes, enrollments); see
+  `docs/HARDWARE.md`.
 - **Settings** — key/value store cached forever (`settings.all`), applied to runtime
   config (app name, timezone, session lifetime, mail) in `AppServiceProvider`.
 - **Backups** — `php artisan backup:run` produces a SQL dump in `storage/app/backups`;
